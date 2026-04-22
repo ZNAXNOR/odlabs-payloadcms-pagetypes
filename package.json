@@ -1,7 +1,7 @@
 {
-  "name": "@odlabs/payloadcms-pagetypes",
+  "name": "@od-labs/payload-pagetypes",
   "version": "1.0.0",
-  "description": "A Payload CMS v3 plugin that enforces structured page types, hierarchical consistency, and block-level restrictions.",
+  "description": "Payload CMS plugin for enforcing page types and block restrictions",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -46,9 +46,8 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
-    "@payloadcms/db-mongodb": "3.82.1",
     "@payloadcms/db-postgres": "3.82.1",
-    "@payloadcms/db-sqlite": "3.82.1",
+    "@payloadcms/db-sqlite": "^3.82.1",
     "@payloadcms/eslint-config": "3.28.0",
     "@payloadcms/next": "3.82.1",
     "@payloadcms/richtext-lexical": "3.82.1",
@@ -64,7 +63,6 @@
     "eslint": "^9.23.0",
     "eslint-config-next": "16.2.3",
     "graphql": "^16.8.1",
-    "mongodb-memory-server": "10.1.4",
     "next": "16.2.3",
     "open": "^10.1.0",
     "payload": "3.82.1",
@@ -115,5 +113,7 @@
     ]
   },
   "registry": "https://registry.npmjs.org/",
-  "dependencies": {}
+  "dependencies": {
+    "sqlite3": "^6.0.1"
+  }
 }
