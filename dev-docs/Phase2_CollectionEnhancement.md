@@ -434,22 +434,22 @@ export type { PluginConfig, PluginOptions }
 
 ## Checklist
 
-- [ ] `enhanceCollection.ts` created
-- [ ] Plugin entry point (`index.ts`) implemented
-- [ ] Config validation added
-- [ ] Dev app starts without errors
-- [ ] pageType field visible on root pages
-- [ ] pageType field hidden on child pages
-- [ ] Validation hooks fire correctly
-- [ ] Root creation works
-- [ ] Child creation works
-- [ ] pageType inherited correctly
-- [ ] Block validation works
-- [ ] Duplicate root prevention works
-- [ ] Delete protection works
-- [ ] All error messages are clear
-- [ ] Build completes without errors
-- [ ] Types are exported correctly
+- [x] `enhanceCollection.ts` created
+- [x] Plugin entry point (`index.ts`) implemented
+- [x] Config validation added
+- [x] Dev app starts without errors
+- [x] pageType field visible on root pages
+- [x] pageType field hidden on child pages (implemented as read-only inheritance)
+- [x] Validation hooks fire correctly
+- [x] Root creation works
+- [x] Child creation works
+- [x] pageType inherited correctly
+- [x] Block validation works
+- [x] Duplicate root prevention works
+- [x] Delete protection works
+- [x] All error messages are clear
+- [x] Build completes without errors
+- [x] Types are exported correctly
 
 ---
 

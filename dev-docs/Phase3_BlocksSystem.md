@@ -1,364 +1,521 @@
-# Phase 3 — Blocks System (HIGHEST RISK)
+# Phase 3 — Blocks System (Native Filtering)
 
-**Goal:** Implement reactive block filtering in admin UI
+**Goal:** Implement block-level restrictions and automatic UI filtering using Payload's native `filterOptions`
 
-**⚠️ Warning:** This phase depends on Payload's internal admin APIs. It has the highest failure risk.
-
-**Recommendation:** Spike this separately first. Test with a minimal implementation before integrating.
+**Status:** Phase 1-2 must be complete. Phase 3 is optional but recommended for better UX.
 
 ---
 
-Phase 3 implements `FilteredBlocksField`, a custom admin component that:
+## Architecture: Block-Level Declarations
 
-1. Reads `pageType` from form state
-2. Filters block options reactively
-3. Hides disallowed blocks
-4. Falls back gracefully if injection fails
+This phase uses **Payload's native `filterOptions` API** on the blocks field. Blocks declare their own page type restrictions, and the plugin automatically enforces them.
 
-Blocks declare their own `allowedPageTypes` in component config. The plugin automatically extracts these and enforces them. UI filtering is optional (server-side validation is always authoritative).
+### Data Flow
 
----
-
-## Key Decision Point
-
-### Success Criteria
-
-Block filtering works smoothly and user can:
-- See only allowed blocks
-- See blocks update when pageType changes
-- Save without issues
-
-### Fallback Option
-
-If this proves incompatible with your Payload version:
-- Show all blocks in UI
-- Show warning about allowed blocks
-- Enforce on server only
-- Document as limitation
+```
+1. Define blocks with allowedPageTypes
+   ↓
+2. Plugin boots, extracts allowedPageTypes from blocks
+   ↓
+3. Plugin creates filterOptions function
+   ↓
+4. Payload uses filterOptions to dynamically filter blocks in admin UI
+   ↓
+5. User can only add blocks allowed for current pageType
+   ↓
+6. beforeValidate hook validates on save (server authoritative)
+```
 
 ---
 
-## Step 3.1 — Spike First (DO NOT INTEGRATE YET)
+## Why This Works (Stability)
 
-Create a standalone test component before integrating into the plugin.
+**Uses only Payload's official, documented APIs:**
 
-### Create: `src/admin/FilteredBlocksField.tsx` (Spike)
+- ✅ Block `allowedPageTypes` property (custom, your plugin extends blocks)
+- ✅ Blocks field `filterOptions` (officially documented in Payload v3)
+- ✅ `beforeValidate` hooks (official Payload lifecycle)
+- ✅ No internal component injection
+- ✅ No form state interception
+- ✅ No custom React components
 
-```tsx
-import React, { useState, useEffect } from 'react'
-import { useFormFields, useField } from '@payloadcms/ui'
-import { BlocksField } from '@payloadcms/plugin-nested-docs'
+Payload's filterOptions on blocks field allows you to provide a function that returns which block slugs should be available based on context. It's re-evaluated as part of the form state request whenever document data changes. If a block is present but no longer allowed, a validation error occurs when saving.
 
-interface FilteredBlocksFieldProps {
-  allBlocks: any[] // All available blocks from config
-  restrictions: any[] // Block restrictions from plugin config
-  pageTypes: any[] // Page types from config
-}
+This is **core Payload functionality**, not an internal API.
 
-/**
- * This is a SPIKE implementation.
- * Test this component in isolation before integrating.
- */
-export const FilteredBlocksField: React.FC<FilteredBlocksFieldProps> = ({
-  allBlocks,
-  restrictions,
-  pageTypes
-}) => {
-  const [allowedBlocks, setAllowedBlocks] = useState(allBlocks)
-  const [pageType, setPageType] = useState<string | null>(null)
-  const [filterFailed, setFilterFailed] = useState(false)
+---
 
-  // Read pageType from form state
-  const formFields = useFormFields(([fields]) => fields)
+## Step 3.1 — Declare Restrictions in Block Configs
 
-  useEffect(() => {
-    try {
-      const currentPageType = formFields?.pageType?.value
+Blocks declare which page types they're allowed on.
 
-      if (!currentPageType) {
-        // No pageType selected, show all blocks
-        setAllowedBlocks(allBlocks)
-        setPageType(null)
-        return
-      }
+### Example: Hero Block
 
-      setPageType(currentPageType)
+```ts
+// src/blocks/Hero.ts
+import { Block } from 'payload'
 
-      // Filter blocks based on restrictions
-      const filtered = allBlocks.filter(block => {
-        const restriction = restrictions?.find(r => r.block === block.slug)
+export const HeroBlock: Block = {
+  slug: 'hero',
+  label: 'Hero',
 
-        // No restriction = allowed everywhere
-        if (!restriction) return true
+  // NEW: Declare which page types this block is allowed on
+  allowedPageTypes: ['services'],
 
-        // Has restriction: check if pageType is in allowed list
-        return restriction.allowedPageTypes.includes(currentPageType)
-      })
-
-      setAllowedBlocks(filtered)
-      setFilterFailed(false)
-    } catch (err) {
-      console.error('Block filtering failed:', err)
-      setFilterFailed(true)
-      // Fallback: show all blocks
-      setAllowedBlocks(allBlocks)
-    }
-  }, [formFields?.pageType?.value, allBlocks, restrictions])
-
-  // Fallback UI if filtering failed
-  if (filterFailed) {
-    return (
-      <div
-        style={{
-          border: '1px solid #ff9500',
-          padding: '12px',
-          borderRadius: '4px',
-          marginBottom: '16px',
-          backgroundColor: '#fff9f0'
-        }}
-      >
-        <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#cc6600' }}>
-          ⚠️ Block filtering unavailable
-        </p>
-        <p style={{ margin: '0 0 8px 0', fontSize: '14px' }}>
-          All blocks are shown. Server validation will enforce restrictions.
-        </p>
-        {pageType && (
-          <p style={{ margin: '0', fontSize: '13px', color: '#666' }}>
-            <strong>Allowed blocks for "{pageType}":</strong>{' '}
-            {getAllowedBlockNames(pageType).join(', ')}
-          </p>
-        )}
-      </div>
-    )
-  }
-
-  // Normal rendering with filtered blocks
-  return (
-    <div>
-      {pageType && (
-        <div style={{ marginBottom: '12px', fontSize: '13px', color: '#666' }}>
-          Showing blocks allowed for{' '}
-          <strong>
-            {pageTypes.find(pt => pt.slug === pageType)?.label || pageType}
-          </strong>
-        </div>
-      )}
-
-      {/* Render the actual blocks field with filtered options */}
-      {/* Note: Implementation depends on your Payload version */}
-      {/* This is a placeholder — actual rendering handled below */}
-    </div>
-  )
-
-  function getAllowedBlockNames(currentPageType: string): string[] {
-    const allowed = allBlocks
-      .filter(block => {
-        const restriction = restrictions?.find(r => r.block === block.slug)
-        if (!restriction) return true
-        return restriction.allowedPageTypes.includes(currentPageType)
-      })
-      .map(b => b.label || b.slug)
-
-    return allowed.length > 0 ? allowed : ['(no blocks allowed)']
-  }
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'subtitle',
+      type: 'text',
+    },
+    {
+      name: 'image',
+      type: 'upload',
+      relationTo: 'media',
+      required: true,
+    },
+  ],
 }
 ```
 
-### Test the spike
+### Example: Testimonials Block
 
-1. Add this to `/src/admin/test-filtered-blocks.tsx`
-2. Render it in isolation
-3. Verify:
-   - Block list updates when pageType changes
-   - No console errors
-   - Fallback UI appears if error occurs
-
----
-
-## Step 3.2 — Understand Block Injection Challenge
-
-The issue used to be: How to override a blocks field?
-
-New approach: Blocks self-declare restrictions. No override needed. Plugin reads `allowedPageTypes` from block config.
-
-**Option B:** Wrap the default field (safer)
 ```ts
-// Let Payload render blocks normally, but control via admin.condition
-admin: {
-  condition: (data) => {
-    // Return true to show, false to hide
-  }
+// src/blocks/Testimonials.ts
+export const TestimonialsBlock: Block = {
+  slug: 'testimonials',
+  label: 'Testimonials',
+
+  // Allowed on multiple types
+  allowedPageTypes: ['services', 'blog'],
+
+  fields: [
+    {
+      name: 'testimonials',
+      type: 'array',
+      fields: [
+        { name: 'quote', type: 'text' },
+        { name: 'author', type: 'text' },
+      ],
+    },
+  ],
 }
 ```
 
-**Option C:** Multiple blocks fields (most reliable)
+### Example: Legal Notice Block
+
 ```ts
-// Create separate blocks fields for each page type
-{
-  name: 'layout_services',
-  type: 'blocks',
-  blocks: [/* hero, testimonials */],
-  admin: {
-    condition: (data) => data.pageType === 'services'
-  }
-},
-{
-  name: 'layout_legal',
-  type: 'blocks',
-  blocks: [/* legal-notice */],
-  admin: {
-    condition: (data) => data.pageType === 'legal'
-  }
+// src/blocks/LegalNotice.ts
+export const LegalNoticeBlock: Block = {
+  slug: 'legal-notice',
+  label: 'Legal Notice',
+
+  // Only on legal pages
+  allowedPageTypes: ['legal'],
+
+  fields: [
+    {
+      name: 'notice',
+      type: 'richtext',
+    },
+  ],
+}
+```
+
+### Example: Global Block (No Restriction)
+
+```ts
+// src/blocks/Spacer.ts
+export const SpacerBlock: Block = {
+  slug: 'spacer',
+  label: 'Spacer',
+
+  // No allowedPageTypes = allowed everywhere
+  // (Omit the property entirely)
+
+  fields: [
+    {
+      name: 'height',
+      type: 'number',
+    },
+  ],
 }
 ```
 
 ---
 
-## Step 3.3 — Recommended Approach: Option C (Most Reliable)
+## Step 3.2 — Update Pages Collection (Single Layout Field)
 
-Instead of trying to override the blocks field, create separate fields per page type.
-
-### Update `src/enhanceCollection.ts`:
+The Pages collection has **one** `layout` field with **all** blocks.
 
 ```ts
-/**
- * Create separate blocks fields for each page type
- * Each field shows only allowed blocks
- */
-function createBlocksFieldsForPageTypes(
-  existingBlocksField: any,
-  config: PluginConfig
-): any[] {
-  const { pageTypes, restrictions } = config
+// dev/collections/Pages.ts
+import { CollectionConfig } from 'payload'
+import { HeroBlock } from '../blocks/Hero'
+import { TestimonialsBlock } from '../blocks/Testimonials'
+import { LegalNoticeBlock } from '../blocks/LegalNotice'
+import { SpacerBlock } from '../blocks/Spacer'
 
-  return pageTypes.map(pageType => {
-    // Filter blocks allowed for this page type
-    const allowedBlocks = existingBlocksField.blocks?.filter(block => {
-      const restriction = restrictions?.find(r => r.block === block.slug)
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+    },
+    // pageType field added by plugin
+    // parent field added by nested docs plugin
 
-      // No restriction = allowed
-      if (!restriction) return true
-
-      // Has restriction: check if this page type is allowed
-      return restriction.allowedPageTypes.includes(pageType.slug)
-    }) || existingBlocksField.blocks
-
-    return {
-      ...existingBlocksField,
+    // SINGLE layout field with ALL blocks
+    {
       name: 'layout',
       type: 'blocks',
-      blocks: allowedBlocks,
-      admin: {
-        ...existingBlocksField.admin,
-        condition: (data) => {
-          // Show this version only for this page type
-          return data.pageType === pageType.slug
-        }
-      }
-    }
-  })
+      blocks: [
+        HeroBlock,
+        TestimonialsBlock,
+        LegalNoticeBlock,
+        SpacerBlock,
+        // Add more blocks here...
+      ],
+      // filterOptions will be added by plugin
+    },
+  ],
 }
 ```
 
-Update `enhanceCollection` to use per-type blocks fields:
+---
+
+## Step 3.3 — Plugin Extracts and Injects filterOptions
+
+The plugin reads `allowedPageTypes` from blocks and sets up `filterOptions`.
+
+### Update `src/enhanceCollection.ts`
 
 ```ts
+import { CollectionConfig } from 'payload'
+import { PluginConfig } from './types'
+
 export function enhanceCollection(
   collection: CollectionConfig,
-  config: PluginConfig
+  config: PluginConfig,
 ): CollectionConfig {
   const fields = collection.fields || []
 
-  // Find existing layout/blocks field
-  const layoutFieldIndex = fields.findIndex(
-    f => typeof f === 'object' && 'name' in f && f.name === 'layout'
-  )
+  // ... existing pageType field and hook injection ...
 
-  let newFields = [...fields]
+  // NEW: Inject filterOptions into blocks field
+  const layoutFieldIndex = fields.findIndex(
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'layout',
+  )
 
   if (layoutFieldIndex !== -1) {
-    const existingLayoutField = fields[layoutFieldIndex]
+    const layoutField = fields[layoutFieldIndex] as any
 
-    // Replace single blocks field with per-type blocks fields
-    const perTypeFields = createBlocksFieldsForPageTypes(
-      existingLayoutField,
-      config
+    // Extract allowed blocks from their config
+    const blockRestrictionsMap = new Map<string, string[]>()
+
+    layoutField.blocks?.forEach((block: any) => {
+      if (block.allowedPageTypes) {
+        blockRestrictionsMap.set(block.slug, block.allowedPageTypes)
+      }
+    })
+
+    // Set filterOptions on the blocks field
+    layoutField.filterOptions = ({ siblingData }: any) => {
+      const pageType = siblingData?.pageType
+
+      // If no pageType selected (root without type), show all blocks
+      if (!pageType) {
+        return true
+      }
+
+      // Filter blocks: return only slugs allowed for this pageType
+      const allowedBlockSlugs: string[] = []
+
+      layoutField.blocks?.forEach((block: any) => {
+        const allowedTypes = blockRestrictionsMap.get(block.slug)
+
+        // No restriction = allowed everywhere
+        if (!allowedTypes) {
+          allowedBlockSlugs.push(block.slug)
+        }
+        // Has restriction: check if current pageType is in allowed list
+        else if (allowedTypes.includes(pageType)) {
+          allowedBlockSlugs.push(block.slug)
+        }
+      })
+
+      return allowedBlockSlugs
+    }
+
+    // Also extract restrictions for server-side validation
+    const restrictions = Array.from(blockRestrictionsMap.entries()).map(
+      ([block, allowedPageTypes]) => ({
+        block,
+        allowedPageTypes,
+      }),
     )
 
-    newFields.splice(layoutFieldIndex, 1, ...perTypeFields)
+    // Update config to include extracted restrictions
+    const enhancedConfig = {
+      ...config,
+      restrictions,
+    }
+
+    // Use enhancedConfig for hooks (already done in earlier phases)
   }
 
-  // ... rest of enhancement
   return {
     ...collection,
-    fields: newFields,
-    hooks: { /* ... */ }
+    fields,
+    hooks: {
+      // ... existing hooks ...
+    },
   }
 }
 ```
 
-### Pros
+---
 
-✅ Simple and reliable
-✅ No internal API dependencies
-✅ Works across Payload versions
-✅ Filtering is explicit and clear
-✅ Easy to debug
+## Step 3.4 — Server-Side Validation (Unchanged)
 
-### Cons
+The `beforeValidate` hook still validates on save (already from Phase 1):
 
-- Slightly more verbose in UI (multiple field sections)
-- Each type sees its own blocks field
-- User must understand the separation
+```ts
+// In beforeValidate hook (from Phase 1)
+if (data.layout && Array.isArray(data.layout)) {
+  const invalidBlocks = data.layout.filter((block) => {
+    const restriction = config.restrictions?.find((r) => r.block === block.blockType)
+    if (!restriction) return false // No restriction = allowed
+    return !restriction.allowedPageTypes.includes(data.pageType)
+  })
+
+  if (invalidBlocks.length > 0) {
+    throw new Error(
+      `Invalid blocks for "${data.pageType}": ${invalidBlocks.map((b) => b.blockType).join(', ')}`,
+    )
+  }
+}
+```
+
+This runs on every save. Even if UI filtering failed, server validation prevents invalid data.
 
 ---
 
-## Step 3.4 — Simpler UI Filtering
+## Step 3.5 — Test in Dev App
 
-Since blocks now declare `allowedPageTypes` directly, UI filtering becomes much simpler.
+```bash
+npm run dev
+```
 
-**Option: Show allowed blocks list based on pageType**
-(purely informational, server validation is authoritative)
+### Test Flow 1: Block Filtering Works
 
-### Example Implementation
+1. Create page with `pageType: "services"`
+2. Go to layout field
+3. **Only HeroBlock, TestimonialsBlock, SpacerBlock appear** (LegalNoticeBlock is hidden)
+4. Try to add Hero block ✅ It's in the list
+5. Change pageType to "legal"
+6. **Layout field updates:** Now only LegalNoticeBlock and SpacerBlock appear
+7. Try to add Hero block ❌ It's no longer in the list
 
-```tsx
-'use client'
-import React from 'react'
-import { useFormFields } from '@payloadcms/ui'
+### Test Flow 2: Server Validation (Fallback)
 
-export const FilteredBlocksInfo = ({ restrictions, pageTypes }) => {
-  const pageType = useFormFields(([fields]) => fields.pageType?.value)
-  if (!pageType) return null
+1. (Advanced) Somehow bypass UI and add forbidden block directly
+2. Click save
+3. ❌ Server validation rejects: "Hero not allowed on legal pages"
 
-  const allowedBlocks = restrictions
-    .filter(r => r.allowedPageTypes.includes(pageType))
-    .map(r => r.block)
+### Test Flow 3: Unrestricted Blocks
 
-  return (
-    <div className="blocks-info">
-      Allowed blocks for {pageType}: {allowedBlocks.join(', ')}
-    </div>
-  )
+1. Create any page type
+2. SpacerBlock appears everywhere (no restriction)
+3. ✅ Can add to any page type
+
+---
+
+## How It Works: Technical Breakdown
+
+### Boot Time (Plugin Init)
+
+```ts
+// Plugin sees this:
+HeroBlock = {
+  slug: 'hero',
+  allowedPageTypes: ['services'],
+  fields: [...]
 }
+
+// Plugin extracts to restrictions:
+restrictions = [
+  { block: 'hero', allowedPageTypes: ['services'] }
+]
+
+// Plugin sets filterOptions:
+filterOptions = ({ siblingData }) => {
+  if (siblingData.pageType === 'services') {
+    return ['hero', 'testimonials', 'spacer']  // Hero allowed
+  }
+  if (siblingData.pageType === 'legal') {
+    return ['legal-notice', 'spacer']  // Hero NOT allowed
+  }
+}
+```
+
+### Admin UI (Form Load)
+
+```
+1. User views page form with pageType = "services"
+2. Payload calls: filterOptions({ siblingData: { pageType: 'services' } })
+3. Gets: ['hero', 'testimonials', 'spacer']
+4. Displays only these blocks in "Add Block" button
+5. User changes pageType to "legal"
+6. Payload re-calls filterOptions
+7. Gets: ['legal-notice', 'spacer']
+8. UI updates, Hero and Testimonials now hidden
+```
+
+### Save Time (Server Validation)
+
+```
+1. User tries to save with invalid blocks
+2. beforeValidate hook runs
+3. Checks: block 'hero' in restrictions?
+   - Yes. Is 'legal' in allowedPageTypes?
+   - No. Invalid.
+4. Throws error: "Hero not allowed on legal pages"
+5. Save fails, user sees error
 ```
 
 ---
 
-## Step 3.5 — Testing
+## Frontend: Just Use `page.layout`
 
-1. Create a page with a specific pageType.
-2. Verify that only blocks allowed for that type are available (if using UI filtering) or that saving with restricted blocks fails (server validation).
+No merge logic needed. Single `layout` field:
+
+```ts
+// Fetch page
+const page = await fetch(`/api/pages/${pageId}`)
+
+// Use layout directly
+page.layout.forEach((block) => renderBlock(block))
+```
+
+Compare to per-type fields approach (would be):
+
+```ts
+// Would need to merge multiple fields:
+const layout = [
+  ...(page.layout_services || []),
+  ...(page.layout_legal || []),
+  ...(page.layout_blog || []),
+]
+```
+
+**Much simpler with single layout field.**
 
 ---
 
-## Checklist
+## Why Block-Level Declarations Are Better
 
-- [x] Blocks declare `allowedPageTypes`
-- [x] Plugin extracts restrictions automatically
-- [x] UI filtering implemented (optional)
-- [x] Server-side validation enforces restrictions
+| Aspect               | Per-Type Fields                | Block-Level Declarations |
+| -------------------- | ------------------------------ | ------------------------ |
+| Single layout field? | ❌ Multiple fields             | ✅ Yes                   |
+| Add new page type    | ❌ Add new field to schema     | ✅ Just use in config    |
+| Scale to 10 types    | ⚠️ 10 separate fields          | ✅ Still one field       |
+| Block declares needs | ❌ Implicit in field lists     | ✅ Explicit in block     |
+| Unique block names?  | ❌ Required (naming conflicts) | ✅ Not required          |
+| Frontend complexity  | ⚠️ Merge logic                 | ✅ Direct `page.layout`  |
+| DRY principle        | ❌ Restrictions duplicated     | ✅ Single source         |
+| Payload API used     | Condition (stable)             | filterOptions (stable)   |
+
+---
+
+## Payload API Stability
+
+Both approaches use **only stable, documented Payload APIs:**
+
+- ✅ Block config properties (you can extend blocks)
+- ✅ `filterOptions` on blocks field (official Payload v3 feature)
+- ✅ `beforeValidate` hooks (core Payload lifecycle)
+- ✅ Server validation via hooks (standard pattern)
+
+**No internal APIs. No custom components. No form state hacking.**
+
+---
+
+## Error Messages
+
+When user tries to save with invalid blocks:
+
+```
+Error: Invalid blocks for "Legal": hero, testimonials
+
+Allowed blocks for Legal pages: legal-notice, spacer
+
+Please remove the highlighted blocks and try again.
+```
+
+Clear, actionable, specific.
+
+---
+
+## Implementation Checklist
+
+- [x] Blocks declare `allowedPageTypes` in their config
+- [x] All blocks defined with appropriate restrictions
+- [x] Pages collection has single `layout` field with all blocks
+- [x] Plugin extracts `allowedPageTypes` from blocks at boot
+- [x] Plugin sets `filterOptions` on blocks field
+- [x] Plugin extracts restrictions for server-side validation
+- [x] Dev app builds without errors
+- [x] Block filtering shows correctly in admin UI
+- [x] Changing pageType updates filtered blocks live
+- [x] Save fails with clear error when user adds restricted block
+- [x] Frontend works with single `page.layout` field (no merge needed)
+
+---
+
+## What This Phase Does NOT Include
+
+❌ Per-type block fields
+❌ Custom React components
+❌ Form state interception
+❌ Payload internal API dependencies
+❌ Fallback modes
+❌ Component injection
+
+Just: **Native Payload `filterOptions` + block declarations.**
+
+---
+
+## Summary
+
+**Architecture:**
+
+1. Blocks declare `allowedPageTypes` (where restriction lives)
+2. Plugin extracts these at boot (single source of truth)
+3. Plugin sets `filterOptions` on blocks field (Payload native)
+4. UI filters dynamically (Payload handles it)
+5. Server validates on save (authoritative, catches edge cases)
+6. Frontend gets single `layout` array (simple to render)
+
+**Benefits:**
+
+- ✅ Stable (only Payload documented APIs)
+- ✅ Scalable (N page types, 1 layout field)
+- ✅ DRY (restriction declared once in block config)
+- ✅ Simple (no custom code, native filtering)
+- ✅ Maintainable (block and restriction together)
 
 ---
 

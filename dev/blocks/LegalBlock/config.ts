@@ -1,8 +1,10 @@
 import type { Block } from 'payload'
 
-export const LegalBlock: Block & { allowedPageTypes?: string[] } = {
+export const LegalBlock: Block = {
   slug: 'legalBlock',
-  allowedPageTypes: ['legal'],
+  custom: {
+    allowedPageTypes: ['legal'],
+  },
   fields: [
     {
       name: 'text',

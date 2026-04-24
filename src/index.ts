@@ -14,12 +14,16 @@ function extractBlockRestrictions(collection: CollectionConfig): BlockRestrictio
 
   if (!layoutField?.blocks) return []
 
-  return layoutField.blocks
-    .filter((block: any) => block.allowedPageTypes)
+  const extracted = layoutField.blocks
+    .filter((block: any) => block.custom?.allowedPageTypes)
     .map((block: any) => ({
       block: block.slug,
-      allowedPageTypes: block.allowedPageTypes,
+      allowedPageTypes: block.custom.allowedPageTypes,
     }))
+
+  console.log('--- PAGE TYPES PLUGIN: Extracted Restrictions ---', extracted)
+  
+  return extracted
 }
 
 /**

@@ -1,8 +1,10 @@
 import type { Block } from 'payload'
 
-export const ServiceBlock: Block & { allowedPageTypes?: string[] } = {
+export const ServiceBlock: Block = {
   slug: 'serviceBlock',
-  allowedPageTypes: ['services'],
+  custom: {
+    allowedPageTypes: ['services'],
+  },
   fields: [
     {
       name: 'text',

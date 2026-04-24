@@ -137,8 +137,55 @@ export function enhanceCollection(collection: CollectionConfig, config: PluginCo
     : [existingBeforeDelete]
 
   // ─────────────────────────────────────────────────────────────
-  // 5. RETURN ENHANCED COLLECTION
+  // 5. ENHANCE LAYOUT FIELD (Native filterOptions)
   // ─────────────────────────────────────────────────────────────
+  const layoutFieldIdx = newFields.findIndex((f) => 'name' in f && f.name === 'layout' && f.type === 'blocks')
+  
+  if (layoutFieldIdx !== -1) {
+    const layoutField = newFields[layoutFieldIdx] as any
+
+    // Extract allowed blocks from their config
+    const blockRestrictionsMap = new Map<string, string[]>()
+
+    layoutField.blocks?.forEach((block: any) => {
+      // In Phase 2 we changed this to block.custom?.allowedPageTypes
+      const allowedPageTypes = block.custom?.allowedPageTypes || block.allowedPageTypes
+      if (allowedPageTypes) {
+        blockRestrictionsMap.set(block.slug, allowedPageTypes)
+      }
+    })
+
+    // Set filterOptions on the blocks field
+    newFields[layoutFieldIdx] = {
+      ...layoutField,
+      filterOptions: ({ siblingData }: any) => {
+        const pageType = siblingData?.pageType
+
+        // If no pageType selected (root without type), show all blocks
+        if (!pageType) {
+          return true
+        }
+
+        // Filter blocks: return only slugs allowed for this pageType
+        const allowedBlockSlugs: string[] = []
+
+        layoutField.blocks?.forEach((block: any) => {
+          const allowedTypes = blockRestrictionsMap.get(block.slug)
+
+          // No restriction = allowed everywhere
+          if (!allowedTypes) {
+            allowedBlockSlugs.push(block.slug)
+          }
+          // Has restriction: check if current pageType is in allowed list
+          else if (allowedTypes.includes(pageType)) {
+            allowedBlockSlugs.push(block.slug)
+          }
+        })
+
+        return allowedBlockSlugs
+      }
+    }
+  }
   return {
     ...collection,
     fields: newFields,
