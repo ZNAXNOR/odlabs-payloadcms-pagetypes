@@ -32,7 +32,7 @@ import { PluginConfig } from './types'
 
 export function enhanceCollection(
   collection: CollectionConfig,
-  config: PluginConfig
+  config: PluginConfig,
 ): CollectionConfig {
   const { pageTypes, enforceRootSlug } = config
 
@@ -44,9 +44,9 @@ export function enhanceCollection(
     name: 'pageType',
     type: 'select',
     label: 'Page Type',
-    options: pageTypes.map(pt => ({
+    options: pageTypes.map((pt) => ({
       label: pt.label,
-      value: pt.slug
+      value: pt.slug,
     })),
     required: false,
     admin: {
@@ -54,14 +54,14 @@ export function enhanceCollection(
       condition: (_, siblingData) => {
         return siblingData?.parent == null
       },
-      description: 'Choose the page type (root pages only). Child pages inherit from their root.'
-    }
+      description: 'Choose the page type (root pages only). Child pages inherit from their root.',
+    },
   }
 
   // Insert after 'slug' field for good UX
   const existingFields = collection.fields || []
   const slugFieldIndex = existingFields.findIndex(
-    f => typeof f === 'object' && 'name' in f && f.name === 'slug'
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'slug',
   )
 
   let newFields = [...existingFields]
@@ -100,8 +100,8 @@ export function enhanceCollection(
     hooks: {
       ...collection.hooks,
       beforeValidate: [...beforeValidateArray, beforeValidateHook],
-      beforeDelete: [...beforeDeleteArray, beforeDeleteHook]
-    }
+      beforeDelete: [...beforeDeleteArray, beforeDeleteHook],
+    },
   }
 }
 ```
@@ -126,35 +126,20 @@ import { Config } from 'payload'
 import { enhanceCollection } from './enhanceCollection'
 import { PluginConfig, PluginOptions } from './types'
 
-/**
- * Payload Page Types Plugin
- *
- * Enforces structured page types with hierarchical consistency
- * and block-level restrictions.
- *
- * Usage:
- *
- * ```ts
- * import { pageTypesPlugin } from '@od-labs/payload-pagetypes'
- *
- * export default buildConfig({
- *   collections: [Pages],
- *   plugins: [
- *     pageTypesPlugin({
- *       collectionSlug: 'pages',
- *       pageTypes: [
- *         { slug: 'services', label: 'Services', required: true },
- *         { slug: 'legal', label: 'Legal', required: false }
- *       ],
- *       restrictions: [
- *         { block: 'hero', allowedPageTypes: ['services'] }
- *       ],
- *       enforceRootSlug: true
- *     })
- *   ]
- * })
- * ```
- */
+function extractBlockRestrictions(collection: CollectionConfig): BlockRestriction[] {
+  const layoutField = collection.fields?.find(
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'layout',
+  )
+
+  if (!layoutField?.blocks) return []
+
+  return layoutField.blocks
+    .filter((block: any) => block.allowedPageTypes)
+    .map((block: any) => ({
+      block: block.slug,
+      allowedPageTypes: block.allowedPageTypes,
+    }))
+}
 
 export const pageTypesPlugin =
   (pluginConfig: PluginConfig) =>
@@ -164,13 +149,22 @@ export const pageTypesPlugin =
 
     return {
       ...config,
-      collections: (config.collections || []).map(collection => {
+      collections: (config.collections || []).map((collection) => {
         // Only enhance the target collection
         if (collection.slug === pluginConfig.collectionSlug) {
-          return enhanceCollection(collection, pluginConfig)
+          // Auto-extract restrictions from blocks
+          const blockRestrictions = extractBlockRestrictions(collection)
+
+          // Merge with any manually defined restrictions (manual takes precedence)
+          const mergedConfig = {
+            ...pluginConfig,
+            restrictions: [...blockRestrictions, ...(pluginConfig.restrictions || [])],
+          }
+
+          return enhanceCollection(collection, mergedConfig)
         }
         return collection
-      })
+      }),
     }
   }
 
@@ -187,13 +181,11 @@ function validatePluginConfig(config: PluginConfig): void {
   }
 
   // Check for duplicate pageType slugs
-  const slugs = config.pageTypes.map(pt => pt.slug)
+  const slugs = config.pageTypes.map((pt) => pt.slug)
   const duplicates = slugs.filter((slug, idx) => slugs.indexOf(slug) !== idx)
 
   if (duplicates.length > 0) {
-    throw new Error(
-      `pageTypesPlugin: Duplicate pageType slugs found: ${duplicates.join(', ')}`
-    )
+    throw new Error(`pageTypesPlugin: Duplicate pageType slugs found: ${duplicates.join(', ')}`)
   }
 
   // Check for invalid restrictions
@@ -201,12 +193,12 @@ function validatePluginConfig(config: PluginConfig): void {
   const validBlockNames = new Set()
 
   if (Array.isArray(config.restrictions)) {
-    config.restrictions.forEach(restriction => {
-      restriction.allowedPageTypes.forEach(slug => {
+    config.restrictions.forEach((restriction) => {
+      restriction.allowedPageTypes.forEach((slug) => {
         if (!validSlugs.has(slug)) {
           throw new Error(
             `pageTypesPlugin: Restriction references invalid pageType "${slug}". ` +
-            `Valid types: ${Array.from(validSlugs).join(', ')}`
+              `Valid types: ${Array.from(validSlugs).join(', ')}`,
           )
         }
       })
@@ -230,7 +222,7 @@ Now test the plugin end-to-end by wiring it into the dev Payload config.
 ```ts
 import path from 'path'
 import { buildConfig } from 'payload'
-import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { slateEditor } from '@payloadcms/richtext-slate'
 import { pageTypesPlugin } from '../src'
 import { Pages } from './collections/Pages'
@@ -239,13 +231,13 @@ export default buildConfig({
   admin: {
     user: 'users',
     importMap: {
-      baseDir: path.resolve(__dirname)
-    }
+      baseDir: path.resolve(__dirname),
+    },
   },
   editor: slateEditor({}),
   collections: [Pages],
-  db: mongooseAdapter({
-    url: process.env.MONGODB_URI || 'mongodb://localhost:27017/payload-pagetypes'
+  db: sqliteAdapter({
+    filename: process.env.SQLITE_DB || './dev/payload.db',
   }),
   secret: process.env.PAYLOAD_SECRET || 'dev-secret-key',
   plugins: [
@@ -254,15 +246,12 @@ export default buildConfig({
       pageTypes: [
         { slug: 'services', label: 'Services', required: true },
         { slug: 'legal', label: 'Legal', required: false },
-        { slug: 'blog', label: 'Blog', required: false }
+        { slug: 'blog', label: 'Blog', required: false },
       ],
-      restrictions: [
-        { block: 'hero', allowedPageTypes: ['services'] },
-        { block: 'testimonials', allowedPageTypes: ['services'] }
-      ],
-      enforceRootSlug: true
-    })
-  ]
+      enforceRootSlug: true,
+      // Note: restrictions auto-extracted from block configs
+    }),
+  ],
 })
 ```
 
@@ -288,6 +277,7 @@ npm run dev
 4. ✅ Should succeed
 
 **Verify:**
+
 - pageType field is visible (parent is empty)
 - No validation errors
 - Slug matches pageType
@@ -354,16 +344,14 @@ npm run dev
 Check that pageType is being saved correctly:
 
 ```bash
-# Connect to MongoDB
-mongosh
+# Connect to SQLite
+sqlite3 payload.db
 
 # Check services root
-db.pages.findOne({ slug: 'services' })
-# Should show: { slug: 'services', pageType: 'services', parent: null, ... }
+SELECT * FROM pages WHERE slug = 'services';
 
 # Check child
-db.pages.findOne({ slug: 'service-detail' })
-# Should show: { slug: 'service-detail', pageType: 'services', parent: ObjectId(...), ... }
+SELECT * FROM pages WHERE slug = 'service-detail';
 ```
 
 ---
@@ -475,6 +463,7 @@ The core plugin now works end-to-end:
 ✅ Database stores everything correctly
 
 **What's next:**
+
 - Phase 3: Blocks field override (risky)
 - Phase 4: Admin widget
 - Phase 5: Nested docs integration

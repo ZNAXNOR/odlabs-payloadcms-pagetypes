@@ -27,9 +27,18 @@
       ],
       "plugin/rsc": [
         "../src/exports/rsc.ts"
+      ],
+      "@od-labs/payload-pagetypes/client": [
+        "../src/exports/client.ts"
+      ],
+      "@od-labs/payload-pagetypes/rsc": [
+        "../src/exports/rsc.ts"
+      ],
+      "@od-labs/payload-pagetypes": [
+        "../src/index.ts"
       ]
     },
     "noEmit": true,
-    "emitDeclarationOnly": false,
+    "emitDeclarationOnly": false
   }
 }

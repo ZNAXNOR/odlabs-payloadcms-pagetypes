@@ -58,13 +58,10 @@ Edit `package.json`:
       "import": "./dist/index.js"
     }
   },
-  "keywords": [
-    "payload",
-    "cms",
-    "plugin",
-    "page-types",
-    "hierarchy"
-  ]
+  "keywords": ["payload", "cms", "plugin", "page-types", "hierarchy"],
+  "devDependencies": {
+    "@payloadcms/db-sqlite": "^1.0.0"
+  }
 }
 ```
 
@@ -151,14 +148,12 @@ export default buildConfig({
       collectionSlug: 'pages',
       pageTypes: [
         { slug: 'services', label: 'Services', required: true },
-        { slug: 'legal', label: 'Legal', required: true }
+        { slug: 'legal', label: 'Legal', required: true },
       ],
-      restrictions: [
-        { block: 'hero', allowedPageTypes: ['services'] }
-      ],
-      enforceRootSlug: true
-    })
-  ]
+      enforceRootSlug: true,
+      // Note: restrictions auto-extracted from block configs
+    }),
+  ],
 })
 ```
 
@@ -179,19 +174,19 @@ export const Pages: CollectionConfig = {
     read: () => true,
     create: () => true,
     update: () => true,
-    delete: () => true
+    delete: () => true,
   },
   fields: [
     {
       name: 'title',
       type: 'text',
-      required: true
+      required: true,
     },
     {
       name: 'slug',
       type: 'text',
       required: true,
-      unique: true
+      unique: true,
     },
     {
       name: 'layout',
@@ -200,20 +195,18 @@ export const Pages: CollectionConfig = {
         {
           slug: 'hero',
           label: 'Hero',
-          fields: [
-            { name: 'title', type: 'text', required: true }
-          ]
+          allowedPageTypes: ['services'], // ← NEW: Block declares its own restrictions
+          fields: [{ name: 'title', type: 'text', required: true }],
         },
         {
           slug: 'testimonials',
           label: 'Testimonials',
-          fields: [
-            { name: 'items', type: 'array', fields: [...] }
-          ]
-        }
-      ]
-    }
-  ]
+          allowedPageTypes: ['services', 'blog'], // ← NEW
+          fields: [{ name: 'items', type: 'array', fields: [] }],
+        },
+      ],
+    },
+  ],
 }
 ```
 
@@ -266,20 +259,23 @@ Build the plugin:
 npm run build
 ```
 
+**Explanation:**
+Blocks now declare `allowedPageTypes` directly in their config. The plugin automatically extracts these restrictions during initialization. This means you no longer need a manual `restrictions` array in the plugin configuration.
+
 No errors = you're ready for Phase 1.
 
 ---
 
 ## Checklist
 
-- [ ] Cloned plugin template
-- [ ] Updated `package.json` with plugin name
-- [ ] Installed dependencies
-- [ ] Dev environment runs (`npm run dev`)
-- [ ] Pages collection created in `/dev`
-- [ ] Plugin entry configured in `payload.config.ts`
-- [ ] Types file created
-- [ ] Build completes without errors
+- [x] Cloned plugin template
+- [x] Updated `package.json` with plugin name
+- [x] Installed dependencies
+- [x] Dev environment runs (`npm run dev`)
+- [x] Pages collection created in `/dev`
+- [x] Plugin entry configured in `payload.config.ts`
+- [x] Types file created
+- [x] Build completes without errors
 
 ---
 

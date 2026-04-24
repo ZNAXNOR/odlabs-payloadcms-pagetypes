@@ -41,7 +41,7 @@ export interface ResolveRootPageTypeArgs {
 export async function resolveRootPageType({
   id,
   req,
-  collectionSlug
+  collectionSlug,
 }: ResolveRootPageTypeArgs): Promise<string> {
   const visited = new Set<string | number>()
   let currentId = id
@@ -52,9 +52,7 @@ export async function resolveRootPageType({
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     // Cycle detection: if we've seen this ID before, there's a cycle
     if (visited.has(currentId)) {
-      throw new Error(
-        `Circular parent reference detected starting at ${id}. Check page hierarchy.`
-      )
+      throw new Error(`Circular parent reference detected starting at ${id}. Check page hierarchy.`)
     }
 
     visited.add(currentId)
@@ -65,18 +63,16 @@ export async function resolveRootPageType({
       current = await req.payload.findByID({
         collection: collectionSlug,
         id: currentId,
-        depth: 0
+        depth: 0,
       })
     } catch (err) {
       throw new Error(
-        `Parent page ${currentId} not found or deleted. Broken hierarchy at page ${id}.`
+        `Parent page ${currentId} not found or deleted. Broken hierarchy at page ${id}.`,
       )
     }
 
     if (!current) {
-      throw new Error(
-        `Parent page ${currentId} returned null. Broken hierarchy at page ${id}.`
-      )
+      throw new Error(`Parent page ${currentId} returned null. Broken hierarchy at page ${id}.`)
     }
 
     // If no parent, we've reached the root
@@ -84,7 +80,7 @@ export async function resolveRootPageType({
       // Validate that root has pageType
       if (!current.pageType || !current.pageType.trim()) {
         throw new Error(
-          `Root page ${currentId} missing or empty pageType. Data corruption detected.`
+          `Root page ${currentId} missing or empty pageType. Data corruption detected.`,
         )
       }
 
@@ -97,7 +93,7 @@ export async function resolveRootPageType({
 
   // Reached iteration limit
   throw new Error(
-    `Page hierarchy too deep (>100 levels). Check for accidental cycles or malformed data.`
+    `Page hierarchy too deep (>100 levels). Check for accidental cycles or malformed data.`,
   )
 }
 ```
@@ -113,8 +109,8 @@ describe('resolveRootPageType', () => {
   // Mock req object for tests
   const mockReq = {
     payload: {
-      findByID: jest.fn()
-    }
+      findByID: jest.fn(),
+    },
   } as any
 
   beforeEach(() => {
@@ -125,13 +121,13 @@ describe('resolveRootPageType', () => {
     mockReq.payload.findByID.mockResolvedValue({
       id: 'root-1',
       parent: null,
-      pageType: 'services'
+      pageType: 'services',
     })
 
     const result = await resolveRootPageType({
       id: 'root-1',
       req: mockReq,
-      collectionSlug: 'pages'
+      collectionSlug: 'pages',
     })
 
     expect(result).toBe('services')
@@ -143,23 +139,23 @@ describe('resolveRootPageType', () => {
       .mockResolvedValueOnce({
         id: 'child-1',
         parent: 'parent-1',
-        pageType: null // Not set on child (should be ignored)
+        pageType: null, // Not set on child (should be ignored)
       })
       .mockResolvedValueOnce({
         id: 'parent-1',
         parent: 'root-1',
-        pageType: null
+        pageType: null,
       })
       .mockResolvedValueOnce({
         id: 'root-1',
         parent: null,
-        pageType: 'services'
+        pageType: 'services',
       })
 
     const result = await resolveRootPageType({
       id: 'child-1',
       req: mockReq,
-      collectionSlug: 'pages'
+      collectionSlug: 'pages',
     })
 
     expect(result).toBe('services')
@@ -171,19 +167,19 @@ describe('resolveRootPageType', () => {
     mockReq.payload.findByID
       .mockResolvedValueOnce({
         id: 'a',
-        parent: 'b'
+        parent: 'b',
       })
       .mockResolvedValueOnce({
         id: 'b',
-        parent: 'a'
+        parent: 'a',
       })
 
     await expect(
       resolveRootPageType({
         id: 'a',
         req: mockReq,
-        collectionSlug: 'pages'
-      })
+        collectionSlug: 'pages',
+      }),
     ).rejects.toThrow(/Circular parent reference/)
   })
 
@@ -191,7 +187,7 @@ describe('resolveRootPageType', () => {
     mockReq.payload.findByID
       .mockResolvedValueOnce({
         id: 'child-1',
-        parent: 'deleted-parent'
+        parent: 'deleted-parent',
       })
       .mockRejectedValueOnce(new Error('Not found'))
 
@@ -199,8 +195,8 @@ describe('resolveRootPageType', () => {
       resolveRootPageType({
         id: 'child-1',
         req: mockReq,
-        collectionSlug: 'pages'
-      })
+        collectionSlug: 'pages',
+      }),
     ).rejects.toThrow(/not found or deleted/)
   })
 
@@ -208,15 +204,15 @@ describe('resolveRootPageType', () => {
     mockReq.payload.findByID.mockResolvedValue({
       id: 'root-1',
       parent: null,
-      pageType: null
+      pageType: null,
     })
 
     await expect(
       resolveRootPageType({
         id: 'root-1',
         req: mockReq,
-        collectionSlug: 'pages'
-      })
+        collectionSlug: 'pages',
+      }),
     ).rejects.toThrow(/missing or empty pageType/)
   })
 
@@ -224,15 +220,15 @@ describe('resolveRootPageType', () => {
     mockReq.payload.findByID.mockResolvedValue({
       id: 'root-1',
       parent: null,
-      pageType: '   ' // Whitespace only
+      pageType: '   ', // Whitespace only
     })
 
     await expect(
       resolveRootPageType({
         id: 'root-1',
         req: mockReq,
-        collectionSlug: 'pages'
-      })
+        collectionSlug: 'pages',
+      }),
     ).rejects.toThrow(/missing or empty pageType/)
   })
 
@@ -242,20 +238,20 @@ describe('resolveRootPageType', () => {
       mockReq.payload.findByID.mockResolvedValueOnce({
         id: `page-${i}`,
         parent: i === 1 ? 'root' : `page-${i - 1}`,
-        pageType: null
+        pageType: null,
       })
     }
 
     mockReq.payload.findByID.mockResolvedValueOnce({
       id: 'root',
       parent: null,
-      pageType: 'services'
+      pageType: 'services',
     })
 
     const result = await resolveRootPageType({
       id: 'page-10',
       req: mockReq,
-      collectionSlug: 'pages'
+      collectionSlug: 'pages',
     })
 
     expect(result).toBe('services')
@@ -274,9 +270,7 @@ import { BeforeValidateHook } from 'payload'
 import { resolveRootPageType } from './resolveRootPageType'
 import { PluginConfig } from './types'
 
-export const createBeforeValidateHook = (
-  config: PluginConfig
-): BeforeValidateHook => {
+export const createBeforeValidateHook = (config: PluginConfig): BeforeValidateHook => {
   return async ({ data, req, originalDoc }) => {
     const { collectionSlug, pageTypes, restrictions, enforceRootSlug } = config
 
@@ -289,7 +283,7 @@ export const createBeforeValidateHook = (
       if (!data.pageType || !data.pageType.trim()) {
         throw new Error(
           'Root pages must define a pageType. Choose from: ' +
-          pageTypes.map(t => t.label).join(', ')
+            pageTypes.map((t) => t.label).join(', '),
         )
       }
 
@@ -297,10 +291,10 @@ export const createBeforeValidateHook = (
       data.pageType = trimmedType
 
       // Rule 2: Validate pageType is in config
-      const validType = pageTypes.find(t => t.slug === trimmedType)
+      const validType = pageTypes.find((t) => t.slug === trimmedType)
       if (!validType) {
         throw new Error(
-          `Invalid pageType "${trimmedType}". Valid types: ${pageTypes.map(t => t.slug).join(', ')}`
+          `Invalid pageType "${trimmedType}". Valid types: ${pageTypes.map((t) => t.slug).join(', ')}`,
         )
       }
 
@@ -308,7 +302,7 @@ export const createBeforeValidateHook = (
       if (enforceRootSlug && data.slug !== trimmedType) {
         throw new Error(
           `For root pages, slug must match pageType. ` +
-          `Set slug to "${trimmedType}" or disable enforceRootSlug.`
+            `Set slug to "${trimmedType}" or disable enforceRootSlug.`,
         )
       }
 
@@ -321,15 +315,15 @@ export const createBeforeValidateHook = (
           where: {
             parent: { exists: false },
             pageType: { equals: trimmedType },
-            ...(originalDoc ? { id: { not_equals: originalDoc.id } } : {})
+            ...(originalDoc ? { id: { not_equals: originalDoc.id } } : {}),
           },
-          limit: 1
+          limit: 1,
         })
 
         if (existing.totalDocs > 0) {
           throw new Error(
             `A root page already exists for page type "${validType.label}". ` +
-            `Only one root per type is allowed.`
+              `Only one root per type is allowed.`,
           )
         }
       }
@@ -345,13 +339,13 @@ export const createBeforeValidateHook = (
         const rootPageType = await resolveRootPageType({
           id: data.parent,
           req,
-          collectionSlug
+          collectionSlug,
         })
 
         data.pageType = rootPageType
       } catch (err) {
         throw new Error(
-          `Cannot save child page: ${err instanceof Error ? err.message : String(err)}`
+          `Cannot save child page: ${err instanceof Error ? err.message : String(err)}`,
         )
       }
     }
@@ -361,11 +355,12 @@ export const createBeforeValidateHook = (
     // ─────────────────────────────────────────────────────────────
 
     if (data.layout && Array.isArray(data.layout)) {
-      const invalidBlocks = data.layout.filter(block => {
+      const invalidBlocks = data.layout.filter((block) => {
         const blockType = block.blockType
 
         // Find restriction for this block
-        const restriction = restrictions?.find(r => r.block === blockType)
+        // Note: restrictions auto-extracted from block configs by enhanceCollection
+        const restriction = config.restrictions?.find((r) => r.block === blockType)
 
         // No restriction = allowed everywhere
         if (!restriction) return false
@@ -374,22 +369,26 @@ export const createBeforeValidateHook = (
         return !restriction.allowedPageTypes.includes(data.pageType)
       })
 
+      /*
+      Restrictions are automatically extracted from block component configs.
+      When a block declares allowedPageTypes, it's converted to a restriction.
+      No manual restrictions array needed in plugin config.
+      */
+
       if (invalidBlocks.length > 0) {
-        const pageTypeLabel = pageTypes.find(t => t.slug === data.pageType)?.label
-        const blockNames = invalidBlocks.map(b => b.blockType).join(', ')
+        const pageTypeLabel = pageTypes.find((t) => t.slug === data.pageType)?.label
+        const blockNames = invalidBlocks.map((b) => b.blockType).join(', ')
 
         throw new Error(
           `The following blocks are not allowed on ${pageTypeLabel} pages: ${blockNames}. ` +
-          `Please remove or replace them before saving.`
+            `Please remove or replace them before saving.`,
         )
       }
     }
   }
 }
 
-export const createBeforeDeleteHook = (
-  config: PluginConfig
-): BeforeDeleteHook => {
+export const createBeforeDeleteHook = (config: PluginConfig): BeforeDeleteHook => {
   return async ({ doc, req }) => {
     const { collectionSlug, pageTypes } = config
 
@@ -402,25 +401,25 @@ export const createBeforeDeleteHook = (
     const children = await req.payload.find({
       collection: collectionSlug,
       where: {
-        parent: { equals: doc.id }
+        parent: { equals: doc.id },
       },
-      limit: 1
+      limit: 1,
     })
 
     if (children.totalDocs > 0) {
       throw new Error(
         `Cannot delete this page because it has ${children.totalDocs} child page(s). ` +
-        `Move or delete child pages first.`
+          `Move or delete child pages first.`,
       )
     }
 
     // Rule 2: Cannot delete required roots
-    const pageTypeCfg = pageTypes.find(t => t.slug === doc.pageType)
+    const pageTypeCfg = pageTypes.find((t) => t.slug === doc.pageType)
 
     if (pageTypeCfg?.required) {
       throw new Error(
         `Cannot delete the "${pageTypeCfg.label}" root page. ` +
-        `This page type is required by your site structure.`
+          `This page type is required by your site structure.`,
       )
     }
   }
@@ -439,12 +438,10 @@ const mockConfig: PluginConfig = {
   collectionSlug: 'pages',
   pageTypes: [
     { slug: 'services', label: 'Services', required: true },
-    { slug: 'legal', label: 'Legal', required: false }
+    { slug: 'legal', label: 'Legal', required: false },
   ],
-  restrictions: [
-    { block: 'hero', allowedPageTypes: ['services'] }
-  ],
-  enforceRootSlug: true
+  restrictions: [{ block: 'hero', allowedPageTypes: ['services'] }],
+  enforceRootSlug: true,
 }
 
 describe('beforeValidate hook', () => {
@@ -456,8 +453,8 @@ describe('beforeValidate hook', () => {
     mockReq = {
       payload: {
         find: jest.fn(),
-        findByID: jest.fn()
-      }
+        findByID: jest.fn(),
+      },
     }
   })
 
@@ -465,8 +462,8 @@ describe('beforeValidate hook', () => {
     await expect(
       hook({
         data: { parent: null, pageType: '' },
-        req: mockReq
-      })
+        req: mockReq,
+      }),
     ).rejects.toThrow(/must define a pageType/)
   })
 
@@ -474,24 +471,23 @@ describe('beforeValidate hook', () => {
     await expect(
       hook({
         data: { parent: null, pageType: 'invalid' },
-        req: mockReq
-      })
+        req: mockReq,
+      }),
     ).rejects.toThrow(/Invalid pageType/)
   })
 
   test('allows child without pageType (computed from root)', async () => {
-    mockReq.payload.findByID
-      .mockResolvedValueOnce({
-        id: 'root-1',
-        parent: null,
-        pageType: 'services'
-      })
+    mockReq.payload.findByID.mockResolvedValueOnce({
+      id: 'root-1',
+      parent: null,
+      pageType: 'services',
+    })
 
     const data = { parent: 'root-1', pageType: null, layout: [] }
 
     await hook({
       data,
-      req: mockReq
+      req: mockReq,
     })
 
     expect(data.pageType).toBe('services')
@@ -503,10 +499,10 @@ describe('beforeValidate hook', () => {
         data: {
           parent: null,
           pageType: 'legal',
-          layout: [{ blockType: 'hero' }]
+          layout: [{ blockType: 'hero' }],
         },
-        req: mockReq
-      })
+        req: mockReq,
+      }),
     ).rejects.toThrow(/not allowed on/)
   })
 
@@ -516,8 +512,8 @@ describe('beforeValidate hook', () => {
       pageType: 'services',
       layout: [
         { blockType: 'hero' },
-        { blockType: 'custom-block' } // Not restricted
-      ]
+        { blockType: 'custom-block' }, // Not restricted
+      ],
     }
 
     await hook({ data, req: mockReq })
@@ -533,8 +529,8 @@ describe('beforeDelete hook', () => {
     hook = createBeforeDeleteHook(mockConfig)
     mockReq = {
       payload: {
-        find: jest.fn()
-      }
+        find: jest.fn(),
+      },
     }
   })
 
@@ -544,8 +540,8 @@ describe('beforeDelete hook', () => {
     await expect(
       hook({
         doc: { id: 'root-1', parent: null, pageType: 'services' },
-        req: mockReq
-      })
+        req: mockReq,
+      }),
     ).rejects.toThrow(/Cannot delete.*required/)
   })
 
@@ -555,8 +551,8 @@ describe('beforeDelete hook', () => {
     await expect(
       hook({
         doc: { id: 'root-1', parent: null, pageType: 'legal' },
-        req: mockReq
-      })
+        req: mockReq,
+      }),
     ).rejects.toThrow(/has.*child/)
   })
 
@@ -566,8 +562,8 @@ describe('beforeDelete hook', () => {
     await expect(
       hook({
         doc: { id: 'root-1', parent: null, pageType: 'legal' },
-        req: mockReq
-      })
+        req: mockReq,
+      }),
     ).resolves.not.toThrow()
   })
 })
@@ -662,7 +658,7 @@ In `hooks.ts`:
 console.log('beforeValidate data:', {
   parent: data.parent,
   pageType: data.pageType,
-  layout: data.layout?.map(b => b.blockType)
+  layout: data.layout?.map((b) => b.blockType),
 })
 ```
 
@@ -677,7 +673,7 @@ api.post('/debug/resolve-root', async (req, res) => {
     const type = await resolveRootPageType({
       id: pageId,
       req: req.payload,
-      collectionSlug: 'pages'
+      collectionSlug: 'pages',
     })
     res.json({ type })
   } catch (err) {
@@ -690,17 +686,17 @@ api.post('/debug/resolve-root', async (req, res) => {
 
 ## Checklist
 
-- [ ] `resolveRootPageType.ts` implemented
-- [ ] `beforeValidate` hook implemented
-- [ ] `beforeDelete` hook implemented
-- [ ] Unit tests written and passing
-- [ ] Root creation works in dev app
-- [ ] Child pages inherit pageType
-- [ ] Block restrictions enforce correctly
-- [ ] Duplicate root prevention works
-- [ ] Delete protection works
-- [ ] Deep nesting (3+ levels) works
-- [ ] All error messages are clear
+- [x] `resolveRootPageType.ts` implemented
+- [x] `beforeValidate` hook implemented
+- [x] `beforeDelete` hook implemented
+- [x] Unit tests written and passing
+- [x] Root creation works in dev app
+- [x] Child pages inherit pageType
+- [x] Block restrictions enforce correctly
+- [x] Duplicate root prevention works
+- [x] Delete protection works
+- [x] Deep nesting (3+ levels) works
+- [x] All error messages are clear
 
 ---
 

@@ -1,22 +1,22 @@
 {
   "npm.packageManager": "pnpm",
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
   "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"
     }
   },
   "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"
     }
   },
   "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"
@@ -31,8 +31,11 @@
     "editor.formatOnSave": true
   },
   "editor.formatOnSaveMode": "file",
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
-  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "editor.formatOnType": false, // required
+  "editor.formatOnPaste": true, // optional
+  "editor.formatOnSave": true, // optional
+  "files.autoSave": "onFocusChange", // optional but recommended
+  "vs-code-prettier-eslint.prettierLast": false, // set as "true" to run 'prettier' last not first
   "[javascript][typescript][typescriptreact]": {
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"

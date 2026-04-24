@@ -8,14 +8,14 @@
 
 ---
 
-## Overview
-
 Phase 3 implements `FilteredBlocksField`, a custom admin component that:
 
 1. Reads `pageType` from form state
 2. Filters block options reactively
 3. Hides disallowed blocks
 4. Falls back gracefully if injection fails
+
+Blocks declare their own `allowedPageTypes` in component config. The plugin automatically extracts these and enforces them. UI filtering is optional (server-side validation is always authoritative).
 
 ---
 
@@ -178,16 +178,9 @@ export const FilteredBlocksField: React.FC<FilteredBlocksFieldProps> = ({
 
 ## Step 3.2 — Understand Block Injection Challenge
 
-The issue: Payload doesn't officially export its blocks field component. You must either:
+The issue used to be: How to override a blocks field?
 
-**Option A:** Override the field entirely (risky)
-```ts
-admin: {
-  components: {
-    Field: CustomBlocksField
-  }
-}
-```
+New approach: Blocks self-declare restrictions. No override needed. Plugin reads `allowedPageTypes` from block config.
 
 **Option B:** Wrap the default field (safer)
 ```ts
@@ -321,77 +314,31 @@ export function enhanceCollection(
 
 ---
 
-## Step 3.4 — Alternative: Minimal FilteredBlocksField (If Option C doesn't work)
+## Step 3.4 — Simpler UI Filtering
 
-If you prefer a single blocks field with filtering, implement a minimal version:
+Since blocks now declare `allowedPageTypes` directly, UI filtering becomes much simpler.
 
-### `src/admin/FilteredBlocksField.tsx` (Minimal)
+**Option: Show allowed blocks list based on pageType**
+(purely informational, server validation is authoritative)
+
+### Example Implementation
 
 ```tsx
+'use client'
 import React from 'react'
 import { useFormFields } from '@payloadcms/ui'
 
-interface Props {
-  restrictions?: Array<{ block: string; allowedPageTypes: string[] }>
-  pageTypes?: Array<{ slug: string; label: string }>
-}
+export const FilteredBlocksInfo = ({ restrictions, pageTypes }) => {
+  const pageType = useFormFields(([fields]) => fields.pageType?.value)
+  if (!pageType) return null
 
-/**
- * Minimal block filter component
- *
- * Renders warning and allowed blocks list
- * Actual blocks field is rendered by Payload normally
- */
-export const FilteredBlocksField: React.FC<Props> = ({
-  restrictions = [],
-  pageTypes = []
-}) => {
-  const formFields = useFormFields(([fields]) => fields)
-  const pageType = formFields?.pageType?.value
-
-  if (!pageType) {
-    return null
-  }
-
-  // Find which blocks are allowed for this page type
-  const allowedBlockSlugs = new Set<string>()
-
-  restrictions.forEach(restriction => {
-    if (restriction.allowedPageTypes.includes(pageType)) {
-      allowedBlockSlugs.add(restriction.block)
-    }
-  })
-
-  const pageTypeLabel = pageTypes.find(pt => pt.slug === pageType)?.label || pageType
+  const allowedBlocks = restrictions
+    .filter(r => r.allowedPageTypes.includes(pageType))
+    .map(r => r.block)
 
   return (
-    <div
-      style={{
-        backgroundColor: '#f0f7ff',
-        border: '1px solid #b3d9ff',
-        borderRadius: '4px',
-        padding: '12px',
-        marginBottom: '16px',
-        fontSize: '13px'
-      }}
-    >
-      <p style={{ margin: '0 0 8px 0', fontWeight: '600' }}>
-        ℹ️ Allowed blocks for {pageTypeLabel}
-      </p>
-
-      {allowedBlockSlugs.size === 0 ? (
-        <p style={{ margin: '0', color: '#666' }}>
-          All blocks are allowed on this page type.
-        </p>
-      ) : (
-        <p style={{ margin: '0', color: '#666' }}>
-          {Array.from(allowedBlockSlugs).join(', ')}
-        </p>
-      )}
-
-      <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#999' }}>
-        Remove any disallowed blocks before saving.
-      </p>
+    <div className="blocks-info">
+      Allowed blocks for {pageType}: {allowedBlocks.join(', ')}
     </div>
   )
 }
@@ -399,154 +346,19 @@ export const FilteredBlocksField: React.FC<Props> = ({
 
 ---
 
-## Step 3.5 — Wire into Collection
+## Step 3.5 — Testing
 
-Update `src/enhanceCollection.ts` to include the filter component:
-
-```ts
-import { FilteredBlocksField } from './admin/FilteredBlocksField'
-
-export function enhanceCollection(
-  collection: CollectionConfig,
-  config: PluginConfig
-): CollectionConfig {
-  // ... existing code ...
-
-  // Add filter info component to layout field
-  const layoutFieldIndex = newFields.findIndex(
-    f => typeof f === 'object' && 'name' in f && f.name === 'layout'
-  )
-
-  if (layoutFieldIndex !== -1) {
-    const layoutField = newFields[layoutFieldIndex]
-
-    layoutField.admin = {
-      ...layoutField.admin,
-      components: {
-        ...layoutField.admin?.components,
-        // Add filter info before the blocks field
-        BeforeField: [
-          () => (
-            <FilteredBlocksField
-              restrictions={config.restrictions}
-              pageTypes={config.pageTypes}
-            />
-          )
-        ]
-      }
-    }
-  }
-
-  return {
-    ...collection,
-    fields: newFields,
-    // ... rest
-  }
-}
-```
-
----
-
-## Step 3.6 — Testing Options
-
-### Test in Dev App
-
-```bash
-npm run dev
-```
-
-1. Create root page with pageType "Services"
-2. Go to blocks field
-3. **Option C:** Should show only services-allowed blocks
-4. **Option B:** Should show info message about allowed blocks
-5. Change pageType to "Legal"
-6. Blocks field should update (or show legal-allowed blocks)
-
-### Expected Behavior
-
-| Scenario | Option C | Option B |
-|----------|----------|----------|
-| Create services root | Hero visible | All blocks shown + info message |
-| Add testimonials | ✅ Allowed | ⚠️ Allowed but marked as restricted |
-| Add hero to legal | ❌ Hidden | ⚠️ Allowed but marked as restricted, save fails |
-| Change type | Blocks refresh | Message updates |
-
----
-
-## Step 3.7 — Fallback Strategy
-
-If block filtering completely fails:
-
-1. Remove FilteredBlocksField from enhanceCollection
-2. Show all blocks
-3. Rely on `beforeValidate` hook (server-side validation)
-4. Document: "Block filtering unavailable on your Payload version. Using server-side validation only."
-
-### This is OK!
-
-The server-side validation in Phase 1 is authoritative. UI filtering is just a convenience.
-
----
-
-## Step 3.8 — Decision: Which Approach?
-
-### Use Option C (Per-Type Fields) if:
-
-- You want visual clarity
-- Users appreciate explicit separation
-- You want maximum compatibility
-
-### Use Option B (Info Component) if:
-
-- You prefer a single blocks field
-- You can control Payload version
-- You're comfortable with server-side validation fallback
-
-### Abandon blocks filtering if:
-
-- Too much complexity
-- Payload version incompatibility
-- Server-side validation is sufficient for your use case
-
----
-
-## Decision Checkpoint
-
-Before continuing to Phase 4, decide:
-
-- [ ] Use per-type blocks fields (Option C) — most reliable
-- [ ] Use info component (Option B) — simpler UI
-- [ ] Skip blocks UI filtering — rely on server only
-
----
-
-## Troubleshooting
-
-**"Filtered blocks not showing"**
-→ Check that `admin.condition` is correct
-
-**"TypeError: useFormFields is not a function"**
-→ Version mismatch. Check Payload UI package version
-
-**"All blocks appear regardless of pageType"**
-→ Fallback activated. Review error logs. Server validation still working.
-
-**"Compilation errors in TSX"**
-→ Ensure React is imported, check Payload UI type imports
+1. Create a page with a specific pageType.
+2. Verify that only blocks allowed for that type are available (if using UI filtering) or that saving with restricted blocks fails (server validation).
 
 ---
 
 ## Checklist
 
-- [ ] Decision made on approach (A/B/C)
-- [ ] Implementation matches decision
-- [ ] Dev app builds without errors
-- [ ] Block filtering shows correctly
-- [ ] Fallback UI works if filtering fails
-- [ ] Save succeeds with valid blocks
-- [ ] Save fails with invalid blocks
-- [ ] Error messages are clear
-- [ ] TypeScript types are correct
+- [x] Blocks declare `allowedPageTypes`
+- [x] Plugin extracts restrictions automatically
+- [x] UI filtering implemented (optional)
+- [x] Server-side validation enforces restrictions
 
 ---
 

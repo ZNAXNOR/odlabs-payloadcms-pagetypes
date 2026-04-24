@@ -2,10 +2,13 @@ import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
-import { plugin } from 'plugin'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
+import { pageTypesPlugin } from '../src/index.js'
+import { GlobalBlock } from './blocks/GlobalBlock/config.js'
+import { LegalBlock } from './blocks/LegalBlock/config.js'
+import { ServiceBlock } from './blocks/ServiceBlock/config.js'
 import { testEmailAdapter } from './helpers/testEmailAdapter.js'
 import { seed } from './seed.js'
 
@@ -31,6 +34,28 @@ export default buildConfig({
           name: 'title',
           type: 'text',
         },
+        {
+          name: 'content',
+          type: 'richText',
+        },
+      ],
+    },
+    {
+      slug: 'pages',
+      fields: [
+        {
+          name: 'title',
+          type: 'text',
+        },
+        {
+          name: 'content',
+          type: 'richText',
+        },
+        {
+          name: 'layout',
+          type: 'blocks',
+          blocks: [GlobalBlock, ServiceBlock, LegalBlock],
+        },
       ],
     },
     {
@@ -53,20 +78,24 @@ export default buildConfig({
   ],
   db: sqliteAdapter({
     client: {
-      url: process.env.DATABASE_URI || 'file:./payload.db',
+      url: process.env.DATABASE_URI || 'file:./dev/payload.db',
     },
   }),
   editor: lexicalEditor(),
-    email: testEmailAdapter,
+  email: testEmailAdapter,
   onInit: async (payload) => {
     await seed(payload)
   },
   plugins: [
-      plugin({
-        collections: {
-          posts: true,
-        },
-      }),
+    pageTypesPlugin({
+      collectionSlug: 'pages',
+      enforceRootSlug: true,
+      pageTypes: [
+        { slug: 'services', label: 'Services', required: true },
+        { slug: 'legal', label: 'Legal', required: true },
+      ],
+      // Note: restrictions auto-extracted from block configs
+    }),
   ],
   secret: process.env.PAYLOAD_SECRET || 'test-secret_key',
   sharp,

@@ -64,11 +64,8 @@ export default buildConfig({
         { slug: 'services', label: 'Services', required: true },
         { slug: 'legal', label: 'Legal', required: true }
       ],
-      restrictions: [
-        { block: 'hero', allowedPageTypes: ['services'] },
-        { block: 'testimonials', allowedPageTypes: ['services'] }
-      ],
       enforceRootSlug: true
+      // Note: restrictions auto-extracted from block configs
     })
   ]
 })
@@ -91,9 +88,23 @@ type BlockRestriction = {
 type PluginConfig = {
   collectionSlug: string
   pageTypes: PageType[]
-  restrictions?: BlockRestriction[]
   enforceRootSlug?: boolean
 }
+
+### Block-level Restrictions
+
+Blocks declare their own `allowedPageTypes` in their config:
+
+```ts
+{
+  slug: 'hero',
+  label: 'Hero',
+  allowedPageTypes: ['services'],  // ← Block declares it
+  fields: [...]
+}
+```
+
+The plugin automatically extracts and enforces these restrictions.
 ```
 
 ## Behavior
@@ -115,8 +126,8 @@ type PluginConfig = {
 
 ### Block Restrictions
 
-* Listed blocks → restricted to specified page types
-* Unlisted blocks → allowed everywhere
+* Blocks declare their own page type restrictions
+* Blocks without restrictions are allowed everywhere
 
 ### Validation Behavior
 
@@ -246,9 +257,9 @@ Do NOT enable plugin enforcement before preparing your data.
 
 ## Limitations
 
-* Depends on Payload v3 admin internals (verify version compatibility)
-* Block filtering is best-effort (server always authoritative)
-* No built-in migration tooling (manual for now)
+* Requires Payload v3+
+* Uses SQLite (not MongoDB)
+* Block restrictions auto-extracted from block configs
 * Single collection support (MVP scope)
 
 ## Known Considerations

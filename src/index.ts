@@ -1,113 +1,97 @@
-import type { CollectionSlug, Config } from 'payload'
+import type { Config, CollectionConfig } from 'payload'
 
-import { customEndpointHandler } from './endpoints/customEndpointHandler.js'
+import type { PluginConfig, BlockRestriction } from './types.js'
 
-export type PluginConfig = {
-  /**
-   * List of collections to add a custom field
-   */
-  collections?: Partial<Record<CollectionSlug, true>>
-  disabled?: boolean
+import { enhanceCollection } from './enhanceCollection.js'
+
+/**
+ * Automatically extract restrictions from block configs
+ */
+function extractBlockRestrictions(collection: CollectionConfig): BlockRestriction[] {
+  const layoutField = collection.fields?.find(
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'layout',
+  ) as any
+
+  if (!layoutField?.blocks) return []
+
+  return layoutField.blocks
+    .filter((block: any) => block.allowedPageTypes)
+    .map((block: any) => ({
+      block: block.slug,
+      allowedPageTypes: block.allowedPageTypes,
+    }))
 }
 
-export const plugin =
-  (pluginOptions: PluginConfig) =>
+/**
+ * Payload Page Types Plugin
+ *
+ * Enforces structured page types with hierarchical consistency
+ * and block-level restrictions.
+ */
+export const pageTypesPlugin =
+  (pluginConfig: PluginConfig) =>
   (config: Config): Config => {
-    if (!config.collections) {
-      config.collections = []
-    }
+    // Validate config before processing
+    validatePluginConfig(pluginConfig)
 
-    config.collections.push({
-      slug: 'plugin-collection',
-      fields: [
-        {
-          name: 'id',
-          type: 'text',
-        },
-      ],
-    })
+    return {
+      ...config,
+      collections: (config.collections || []).map((collection) => {
+        // Only enhance the target collection
+        if (collection.slug === pluginConfig.collectionSlug) {
+          // Auto-extract restrictions from blocks
+          const blockRestrictions = extractBlockRestrictions(collection)
 
-    if (pluginOptions.collections) {
-      for (const collectionSlug in pluginOptions.collections) {
-        const collection = config.collections.find(
-          (collection) => collection.slug === collectionSlug,
-        )
+          // Merge with any manually defined restrictions (manual takes precedence)
+          const mergedConfig = {
+            ...pluginConfig,
+            restrictions: [...blockRestrictions, ...(pluginConfig.restrictions || [])],
+          }
 
-        if (collection) {
-          collection.fields.push({
-            name: 'addedByPlugin',
-            type: 'text',
-            admin: {
-              position: 'sidebar',
-            },
-          })
+          return enhanceCollection(collection, mergedConfig)
         }
-      }
+        return collection
+      }),
     }
-
-    /**
-     * If the plugin is disabled, we still want to keep added collections/fields so the database schema is consistent which is important for migrations.
-     * If your plugin heavily modifies the database schema, you may want to remove this property.
-     */
-    if (pluginOptions.disabled) {
-      return config
-    }
-
-    if (!config.endpoints) {
-      config.endpoints = []
-    }
-
-    if (!config.admin) {
-      config.admin = {}
-    }
-
-    if (!config.admin.components) {
-      config.admin.components = {}
-    }
-
-    if (!config.admin.components.beforeDashboard) {
-      config.admin.components.beforeDashboard = []
-    }
-
-    config.admin.components.beforeDashboard.push(
-      `plugin/client#BeforeDashboardClient`,
-    )
-    config.admin.components.beforeDashboard.push(
-      `plugin/rsc#BeforeDashboardServer`,
-    )
-
-    config.endpoints.push({
-      handler: customEndpointHandler,
-      method: 'get',
-      path: '/my-plugin-endpoint',
-    })
-
-    const incomingOnInit = config.onInit
-
-    config.onInit = async (payload) => {
-      // Ensure we are executing any existing onInit functions before running our own.
-      if (incomingOnInit) {
-        await incomingOnInit(payload)
-      }
-
-      const { totalDocs } = await payload.count({
-        collection: 'plugin-collection',
-        where: {
-          id: {
-            equals: 'seeded-by-plugin',
-          },
-        },
-      })
-
-      if (totalDocs === 0) {
-        await payload.create({
-          collection: 'plugin-collection',
-          data: {
-            id: 'seeded-by-plugin',
-          },
-        })
-      }
-    }
-
-    return config
   }
+
+/**
+ * Validate plugin configuration at startup
+ */
+function validatePluginConfig(config: PluginConfig): void {
+  if (!config.collectionSlug) {
+    throw new Error('pageTypesPlugin: collectionSlug is required')
+  }
+
+  if (!Array.isArray(config.pageTypes) || config.pageTypes.length === 0) {
+    throw new Error('pageTypesPlugin: pageTypes array must not be empty')
+  }
+
+  // Check for duplicate pageType slugs
+  const slugs = config.pageTypes.map((pt) => pt.slug)
+  const duplicates = slugs.filter((slug, idx) => slugs.indexOf(slug) !== idx)
+
+  if (duplicates.length > 0) {
+    throw new Error(`pageTypesPlugin: Duplicate pageType slugs found: ${duplicates.join(', ')}`)
+  }
+
+  // Check for invalid restrictions
+  const validSlugs = new Set(slugs)
+
+  if (Array.isArray(config.restrictions)) {
+    config.restrictions.forEach((restriction) => {
+      restriction.allowedPageTypes.forEach((slug) => {
+        if (!validSlugs.has(slug)) {
+          throw new Error(
+            `pageTypesPlugin: Restriction references invalid pageType "${slug}". ` +
+              `Valid types: ${Array.from(validSlugs).join(', ')}`,
+          )
+        }
+      })
+    })
+  }
+}
+
+// Re-export types for convenience
+export { resolveRootPageType } from './resolveRootPageType.js'
+export type { PluginConfig } from './types.js'

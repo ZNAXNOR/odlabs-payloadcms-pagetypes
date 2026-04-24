@@ -120,7 +120,7 @@ npm run build
   "devDependencies": {
     "payload": "^3.0.0",
     "@payloadcms/plugin-nested-docs": "^1.0.0",
-    "@payloadcms/db-mongodb": "^1.0.0",
+    "@payloadcms/db-sqlite": "^1.0.0",
     "@payloadcms/richtext-slate": "^1.0.0",
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0",
@@ -274,10 +274,8 @@ export default buildConfig({
         { slug: 'services', label: 'Services', required: true },
         { slug: 'legal', label: 'Legal', required: false }
       ],
-      restrictions: [
-        { block: 'hero', allowedPageTypes: ['services'] }
-      ],
       enforceRootSlug: true
+      // Note: restrictions auto-extracted from block configs
     })
   ]
 })
@@ -396,6 +394,8 @@ For existing pages:
 - Requires Payload v3+
 - Single collection per plugin instance
 - Block filtering is best-effort (server validation authoritative)
+- Uses SQLite (not MongoDB)
+- Block restrictions auto-extracted from block configs
 - No GraphQL block restriction support
 
 ## Troubleshooting

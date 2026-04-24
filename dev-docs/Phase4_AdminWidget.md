@@ -488,7 +488,7 @@ npm run dev
 
 ### Test Flow 2: Widget detects duplicates
 
-1. Manually create 2 roots with same pageType (via MongoDB or API)
+1. Manually create 2 roots with same pageType (via SQLite or API)
 2. Refresh dashboard
 3. Widget should show yellow warning
 4. Should list both duplicate roots with edit links

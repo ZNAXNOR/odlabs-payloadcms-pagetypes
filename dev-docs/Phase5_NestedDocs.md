@@ -83,8 +83,8 @@ export default buildConfig({
 
   collections: [Pages],
 
-  db: mongooseAdapter({
-    url: process.env.MONGODB_URI || 'mongodb://localhost:27017/payload-pagetypes'
+  db: sqliteAdapter({
+    filename: process.env.SQLITE_DB || './dev/payload.db'
   }),
 
   secret: process.env.PAYLOAD_SECRET || 'dev-secret-key',
@@ -107,11 +107,8 @@ export default buildConfig({
         { slug: 'legal', label: 'Legal', required: false },
         { slug: 'blog', label: 'Blog', required: false }
       ],
-      restrictions: [
-        { block: 'hero', allowedPageTypes: ['services'] },
-        { block: 'testimonials', allowedPageTypes: ['services'] }
-      ],
       enforceRootSlug: true
+      // Note: restrictions auto-extracted from block configs
     })
   ]
 })
@@ -227,8 +224,8 @@ Layout
 Check database:
 
 ```bash
-mongosh
-db.pages.findOne({ slug: 'web-design' })
+sqlite3 payload.db
+SELECT * FROM pages WHERE slug = 'web-design';
 ```
 
 Should show field added by nested docs (may vary by version):
