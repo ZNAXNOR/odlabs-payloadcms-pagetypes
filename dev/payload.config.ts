@@ -5,12 +5,12 @@ import { buildConfig } from 'payload'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
-import { pageTypesPlugin } from '../src/index.js'
-import { GlobalBlock } from './blocks/GlobalBlock/config.js'
-import { LegalBlock } from './blocks/LegalBlock/config.js'
-import { ServiceBlock } from './blocks/ServiceBlock/config.js'
-import { testEmailAdapter } from './helpers/testEmailAdapter.js'
-import { seed } from './seed.js'
+import { pageTypesPlugin } from '../src/index'
+import { GlobalBlock } from './blocks/GlobalBlock/config'
+import { LegalBlock } from './blocks/LegalBlock/config'
+import { ServiceBlock } from './blocks/ServiceBlock/config'
+import { testEmailAdapter } from './helpers/testEmailAdapter'
+import { seed } from './seed'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -94,6 +94,7 @@ export default buildConfig({
         { slug: 'services', label: 'Services', required: true },
         { slug: 'legal', label: 'Legal', required: true },
       ],
+      enableDashboardWidget: true, // Toggle on/off
       // Note: restrictions auto-extracted from block configs
     }),
   ],

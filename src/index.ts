@@ -1,8 +1,8 @@
 import type { Config, CollectionConfig } from 'payload'
 
-import type { PluginConfig, BlockRestriction } from './types.js'
+import type { PluginConfig, BlockRestriction } from './types'
 
-import { enhanceCollection } from './enhanceCollection.js'
+import { enhanceCollection } from './enhanceCollection'
 
 /**
  * Automatically extract restrictions from block configs
@@ -38,24 +38,67 @@ export const pageTypesPlugin =
     // Validate config before processing
     validatePluginConfig(pluginConfig)
 
+    // Enhance target collection
+    const enhancedCollections = (config.collections || []).map((collection) => {
+      if (collection.slug === pluginConfig.collectionSlug) {
+        // Auto-extract restrictions from blocks
+        const blockRestrictions = extractBlockRestrictions(collection)
+
+        // Merge with any manually defined restrictions (manual takes precedence)
+        const mergedConfig = {
+          ...pluginConfig,
+          restrictions: [...blockRestrictions, ...(pluginConfig.restrictions || [])],
+        }
+
+        return enhanceCollection(collection, mergedConfig)
+      }
+      return collection
+    })
+
+    // Skip widget if explicitly disabled
+    if (pluginConfig.enableDashboardWidget === false) {
+      return { ...config, collections: enhancedCollections }
+    }
+
+    // Register widget in modular dashboard
     return {
       ...config,
-      collections: (config.collections || []).map((collection) => {
-        // Only enhance the target collection
-        if (collection.slug === pluginConfig.collectionSlug) {
-          // Auto-extract restrictions from blocks
-          const blockRestrictions = extractBlockRestrictions(collection)
-
-          // Merge with any manually defined restrictions (manual takes precedence)
-          const mergedConfig = {
-            ...pluginConfig,
-            restrictions: [...blockRestrictions, ...(pluginConfig.restrictions || [])],
-          }
-
-          return enhanceCollection(collection, mergedConfig)
-        }
-        return collection
-      }),
+      collections: enhancedCollections,
+      admin: {
+        ...config.admin,
+        dashboard: {
+          ...config.admin?.dashboard,
+          widgets: [
+            ...(config.admin?.dashboard?.widgets || []),
+            {
+              slug: 'page-types-health',
+              label: 'Page Types Health',
+              Component: {
+                path: '@od-labs/payload-pagetypes/rsc',
+                exportName: 'PageTypesHealthWidget',
+                serverProps: {
+                  pageTypes: pluginConfig.pageTypes,
+                  collectionSlug: pluginConfig.collectionSlug,
+                },
+              },
+              fields: [
+                {
+                  name: 'pageTypes',
+                  type: 'json',
+                  label: 'Page Types (auto-injected by plugin)',
+                },
+                {
+                  name: 'collectionSlug',
+                  type: 'text',
+                  label: 'Collection Slug',
+                },
+              ],
+              minWidth: 'small',
+              maxWidth: 'full',
+            },
+          ],
+        },
+      },
     }
   }
 
@@ -97,5 +140,5 @@ function validatePluginConfig(config: PluginConfig): void {
 }
 
 // Re-export types for convenience
-export { resolveRootPageType } from './resolveRootPageType.js'
-export type { PluginConfig } from './types.js'
+export { resolveRootPageType } from './resolveRootPageType'
+export type { PluginConfig } from './types'

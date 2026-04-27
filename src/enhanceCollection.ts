@@ -3,9 +3,9 @@ import type { CollectionConfig, Field } from 'payload'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-import type { PluginConfig } from './types.js'
+import type { PluginConfig } from './types'
 
-import { createBeforeDeleteHook, createBeforeValidateHook } from './hooks.js'
+import { createBeforeDeleteHook, createBeforeValidateHook } from './hooks'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -188,6 +188,13 @@ export function enhanceCollection(collection: CollectionConfig, config: PluginCo
   }
   return {
     ...collection,
+    custom: {
+      ...collection.custom,
+      pageTypesPlugin: {
+        pageTypes: config.pageTypes,
+        collectionSlug: config.collectionSlug,
+      },
+    },
     fields: newFields,
     hooks: {
       ...collection.hooks,

@@ -14,4 +14,5 @@ export type PluginConfig = {
   enforceRootSlug?: boolean
   pageTypes: PageTypeConfig[]
   restrictions?: BlockRestriction[]
+  enableDashboardWidget?: boolean
 }

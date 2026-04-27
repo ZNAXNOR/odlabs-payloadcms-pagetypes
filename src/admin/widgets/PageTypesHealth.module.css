@@ -1,0 +1,250 @@
+.widget {
+  background-color: var(--theme-elevation-50);
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--border-radius-m, 0.5rem);
+  padding: 1.5rem;
+  font-family: inherit;
+  color: var(--theme-text);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.badgeHealthy {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: rgb(4, 120, 87);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.badgeError {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: rgb(185, 28, 28);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.alert {
+  border-radius: var(--border-radius-m, 0.5rem);
+  padding: 1rem;
+  border: 1px solid transparent;
+}
+
+.alertError {
+  background-color: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: rgb(153, 27, 27);
+}
+
+.alertWarning {
+  background-color: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: rgb(180, 83, 9);
+}
+
+.alertTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.alertIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.label {
+  font-weight: 500;
+}
+
+.required {
+  font-size: 0.75rem;
+  color: var(--theme-elevation-400);
+  margin-left: 0.5rem;
+}
+
+.success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgb(5, 150, 105);
+  font-size: 0.875rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  border-top: 1px solid var(--theme-elevation-150);
+  padding-top: 1.5rem;
+  text-align: center;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--theme-elevation-500);
+  margin-bottom: 0.25rem;
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+.quickCreateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--theme-text);
+  background-color: var(--theme-elevation-100);
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: var(--border-radius-s, 0.25rem);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quickCreateBtn:hover {
+  background-color: var(--theme-elevation-200);
+}
+
+.quickCreateBtnIcon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.modalOverlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modalContent {
+  background-color: var(--theme-elevation-0);
+  border-radius: var(--border-radius-m, 0.5rem);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.modalHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--theme-elevation-150);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.modalBody {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--theme-elevation-500);
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+}
+
+.closeButton:hover {
+  background-color: var(--theme-elevation-100);
+  color: var(--theme-text);
+}
+
+.viewDetails {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  text-align: center;
+  background: transparent;
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: var(--border-radius-m, 0.5rem);
+  color: var(--theme-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.viewDetails:hover {
+  background-color: var(--theme-elevation-100);
+}
+
+/* Progressive Disclosure (simulated via standard classes, assuming widget doesn't know its size via prop) */
+/* We'll use a standard layout since we can't easily detect the Dashboard Widget size purely from CSS unless Payload adds size classes. */
+/* Wait, Payload adds class names based on widget size? No, `minWidth` etc just controls grid span. */

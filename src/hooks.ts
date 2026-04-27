@@ -1,8 +1,8 @@
 import type { CollectionBeforeDeleteHook, CollectionBeforeValidateHook } from 'payload'
 
-import type { PluginConfig } from './types.js'
+import type { PluginConfig } from './types'
 
-import { resolveRootPageType } from './resolveRootPageType.js'
+import { resolveRootPageType } from './resolveRootPageType'
 
 export const createBeforeValidateHook = (config: PluginConfig): CollectionBeforeValidateHook => {
   return async ({ data, originalDoc, req }) => {
