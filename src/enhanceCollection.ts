@@ -1,4 +1,4 @@
-import type { CollectionConfig, Field } from 'payload'
+import { type CollectionConfig, type Field, slugField } from 'payload'
 
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -17,69 +17,63 @@ export function enhanceCollection(collection: CollectionConfig, config: PluginCo
   const newFields = [...existingFields]
 
   // ─────────────────────────────────────────────────────────────
-  // 1. MANAGE slug FIELD
+  // 1. MANAGE slug FIELD (Custom component & soft validation)
   // ─────────────────────────────────────────────────────────────
-  const slugFieldIdx = newFields.findIndex((f) => 'name' in f && f.name === 'slug')
-  const slugField: Field = {
-    name: 'slug',
-    type: 'text',
-    admin: {
-      description: ({ data }: any) => {
-        if (config.enforceRootSlug && data?.pageType && data?.slug !== data.pageType && !data.parent) {
-          return `⚠️ Warning: Slug does not match Page Type. Recommended: "${data.pageType}"`
-        }
-        return 'The slug is used to identify the page in the URL.'
-      },
+  let foundSlug = false
+
+  const enhanceSlugField = (f: any) => {
+    foundSlug = true
+    f.admin = {
+      ...f.admin,
       position: 'sidebar',
-    },
-    index: true,
-    required: true,
+    }
   }
 
-  if (slugFieldIdx === -1) {
-    newFields.push(slugField)
-  } else {
-    const existing = newFields[slugFieldIdx] as any
-    newFields[slugFieldIdx] = {
+  const walkFields = (fields: Field[]) => {
+    for (let i = 0; i < fields.length; i++) {
+      const f = fields[i] as any
+      if (f.name === 'slug') {
+        enhanceSlugField(f)
+      } else if (f.fields) {
+        walkFields(f.fields)
+      }
+    }
+  }
+
+  walkFields(newFields)
+
+  if (!foundSlug) {
+    newFields.push(
+      slugField({
+        useAsSlug: 'title',
+        overrides: (field: any) => {
+          const slugF = field.fields.find((f: any) => f.name === 'slug') as any
+          if (slugF) {
+            enhanceSlugField(slugF)
+          }
+          field.admin = { ...field.admin, position: 'sidebar' }
+          return field
+        },
+      })
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 2. MANAGE parent FIELD (Nested Docs aware)
+  // ─────────────────────────────────────────────────────────────
+  const parentIdx = newFields.findIndex((f) => 'name' in f && f.name === 'parent')
+  if (parentIdx !== -1) {
+    const existing = newFields[parentIdx] as any
+    newFields[parentIdx] = {
       ...existing,
       admin: {
         ...existing.admin,
-        description: slugField.admin?.description,
+        condition: (data: any) => !data?.pageType || !!data?.parent,
         position: 'sidebar',
       },
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // 2. MANAGE parent FIELD
-  // ─────────────────────────────────────────────────────────────
-  const parentFieldIdx = newFields.findIndex((f) => 'name' in f && f.name === 'parent')
-  const parentField: Field = {
-    name: 'parent',
-    type: 'relationship',
-    admin: {
-      // Logic: Hide parent ONLY if a pageType is selected AND no parent is selected yet.
-      // This allows child pages (which have inherited types) to still see their parent field.
-      condition: (data: any) => !data?.pageType || !!data?.parent,
-      position: 'sidebar',
-    },
-    maxDepth: 1,
-    relationTo: collection.slug,
-  }
-
-  if (parentFieldIdx === -1) {
-    newFields.push(parentField)
-  } else {
-    const existing = newFields[parentFieldIdx] as any
-    newFields[parentFieldIdx] = {
-      ...existing,
-      admin: {
-        ...existing.admin,
-        condition: parentField.admin?.condition,
-        position: 'sidebar',
-      },
-    }
-  }
 
   // ─────────────────────────────────────────────────────────────
   // 3. MANAGE pageType FIELD
@@ -92,6 +86,7 @@ export function enhanceCollection(collection: CollectionConfig, config: PluginCo
         // Use the Client Component for reactive behavior
         Field: '@od-labs/payload-pagetypes/client#PageTypeField',
       },
+      condition: (_, siblingData) => !siblingData?.parent,
       description: 'Choose the page type. Child pages inherit from their root.',
       position: 'sidebar',
     },
@@ -103,21 +98,44 @@ export function enhanceCollection(collection: CollectionConfig, config: PluginCo
     required: false,
   }
 
-  // Check if it already exists
-  const pageTypeFieldIdx = newFields.findIndex((f) => 'name' in f && f.name === 'pageType')
-  if (pageTypeFieldIdx === -1) {
-    newFields.push(pageTypeField)
-  } else {
-    const existing = newFields[pageTypeFieldIdx] as any
-    newFields[pageTypeFieldIdx] = {
-      ...existing,
-      ...pageTypeField,
-      admin: {
-        ...existing.admin,
-        ...pageTypeField.admin,
-      },
+  // ─────────────────────────────────────────────────────────────
+  // 5. ENFORCE SIDEBAR HIERARCHY (Slug -> Parent -> PageType)
+  // ─────────────────────────────────────────────────────────────
+  
+  // 1. Extract and remove these fields to re-insert in order
+  const extractField = (name: string) => {
+    const idx = newFields.findIndex(f => 'name' in f && f.name === name)
+    if (idx !== -1) {
+      return newFields.splice(idx, 1)[0]
     }
+    // Also check for slugField (Row field)
+    const rowIdx = newFields.findIndex(f => f.type === 'row' && f.fields?.some((sub: any) => sub.name === name))
+    if (rowIdx !== -1) {
+      return newFields.splice(rowIdx, 1)[0]
+    }
+    return null
   }
+
+  const slugWarningField: Field = {
+    name: 'slugWarning',
+    type: 'ui',
+    admin: {
+      components: {
+        Field: '@od-labs/payload-pagetypes/client#SlugDescription',
+      },
+      position: 'sidebar',
+    },
+  }
+
+  const slugF = extractField('slug')
+  const parentF = extractField('parent')
+  const pageTypeF = extractField('pageType') || pageTypeField
+
+  // 2. Push in desired order to the end
+  if (slugF) newFields.push(slugF)
+  newFields.push(slugWarningField) // Inject warning as a separate UI field
+  if (parentF) newFields.push(parentF)
+  if (pageTypeF) newFields.push(pageTypeF)
 
   // ─────────────────────────────────────────────────────────────
   // 4. INJECT HOOKS

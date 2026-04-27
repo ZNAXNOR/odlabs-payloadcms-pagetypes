@@ -4,7 +4,13 @@ import { FieldLabel, SelectInput, useConfig, useDocumentInfo, useField, useFormF
 import React, { useEffect, useState } from 'react'
 
 export const PageTypeField: React.FC<any> = (props) => {
-  const { label, path, validate } = props
+  const { label: labelFromProps, path, validate } = props
+  const label = labelFromProps || props.field?.label || 'Page Type'
+  
+  useEffect(() => {
+    console.log('PageTypeField props:', { label, path, value: props.value })
+  }, [label, path, props.value])
+
   const staticOptions = props.options || props.field?.options || []
   const { errorMessage, setValue, showError, value } = useField<string>({ path, validate })
   const { id } = useDocumentInfo()
@@ -90,35 +96,43 @@ export const PageTypeField: React.FC<any> = (props) => {
   const isReadOnly = !!parentId
 
   return (
-    <div className="field-type select">
-      <FieldLabel label={label} />
-      <SelectInput
-        description={
-          isReadOnly
-            ? `Inherited from parent root.`
-            : usedTypes.size > 0
-            ? 'Some types are hidden because they are already used as root pages.'
-            : props.admin?.description
-        }
-        label={undefined} // Label is rendered separately above
-        name={path}
-        onChange={(val: any) => {
-          if (val) {
-            setValue(val.value || val)
-          } else {
-            setValue(null as any)
+    <div className="field-type select" style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '0.5rem' }}>
+        <FieldLabel
+          label={label}
+          path={path}
+          required={props.field?.required}
+        />
+      </div>
+      <div style={{ position: 'relative' }}>
+        <SelectInput
+          description={
+            isReadOnly
+              ? `Inherited from parent root.`
+              : usedTypes.size > 0
+              ? 'Some types are hidden because they are already used as root pages.'
+              : props.admin?.description
           }
-        }}
-        options={filteredOptions}
-        path={path}
-        readOnly={isReadOnly}
-        showError={showError}
-        style={{
-          opacity: isReadOnly ? 0.7 : 1,
-          pointerEvents: isReadOnly ? 'none' : 'auto',
-        }}
-        value={value}
-      />
+          label={undefined}
+          name={path}
+          onChange={(val: any) => {
+            if (val) {
+              setValue(val.value || val)
+            } else {
+              setValue(null as any)
+            }
+          }}
+          options={filteredOptions}
+          path={path}
+          readOnly={isReadOnly}
+          showError={showError}
+          style={{
+            opacity: isReadOnly ? 0.6 : 1,
+            cursor: isReadOnly ? 'not-allowed' : 'auto',
+          }}
+          value={value}
+        />
+      </div>
       {showError && errorMessage && (
         <div style={{ color: 'var(--theme-error-500)', fontSize: '0.8rem', marginTop: '4px' }}>
           {errorMessage}

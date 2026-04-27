@@ -75,6 +75,13 @@ export const createBeforeValidateHook = (config: PluginConfig): CollectionBefore
             )
           }
         }
+
+        // Rule 3: Slug Validation (Soft mode)
+        const currentSlug = data.slug !== undefined ? data.slug : originalDoc?.slug
+        if (config.enforceRootSlug && currentSlug && currentSlug !== trimmedType) {
+          // Soft validation: we let it save. The UI/Description will show the warning.
+          // Note: If the user explicitly wants blocking strict mode, we'd add another flag.
+        }
       }
     }
 

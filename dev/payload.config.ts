@@ -4,6 +4,7 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
+import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
 
 import { pageTypesPlugin } from '../src/index'
 import { GlobalBlock } from './blocks/GlobalBlock/config'
@@ -87,6 +88,10 @@ export default buildConfig({
     await seed(payload)
   },
   plugins: [
+    nestedDocsPlugin({
+      collections: ['pages'],
+      generateURL: (docs: any[]) => docs.map((doc: any) => doc.slug).join('/'),
+    }),
     pageTypesPlugin({
       collectionSlug: 'pages',
       enforceRootSlug: true,
