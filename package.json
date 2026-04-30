@@ -1,6 +1,6 @@
 {
   "name": "@od-labs/payload-pagetypes",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Payload CMS plugin for enforcing page types and block restrictions",
   "keywords": [
     "payloadcms",
