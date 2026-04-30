@@ -1,0 +1,176 @@
+{
+  "nodes": [
+    {
+      "id": "eslint_config_js",
+      "label": "ESLint Configuration",
+      "file_type": "code",
+      "source_file": "eslint.config.js"
+    },
+    {
+      "id": "playwright_config_js",
+      "label": "Playwright Configuration",
+      "file_type": "code",
+      "source_file": "playwright.config.js"
+    },
+    {
+      "id": "postcss_config_mjs",
+      "label": "PostCSS Configuration",
+      "file_type": "code",
+      "source_file": "postcss.config.mjs"
+    },
+    {
+      "id": "vitest_config_js",
+      "label": "Vitest Configuration",
+      "file_type": "code",
+      "source_file": "vitest.config.js"
+    },
+    {
+      "id": "dev_e2e_spec_ts",
+      "label": "E2E Tests",
+      "file_type": "code",
+      "source_file": "dev/e2e.spec.ts"
+    },
+    {
+      "id": "dev_int_spec_ts",
+      "label": "Integration Tests",
+      "file_type": "code",
+      "source_file": "dev/int.spec.ts"
+    },
+    {
+      "id": "dev_next_config_mjs",
+      "label": "Next.js Configuration",
+      "file_type": "code",
+      "source_file": "dev/next.config.mjs"
+    },
+    {
+      "id": "dev_payload_types_ts",
+      "label": "Payload Generated Types",
+      "file_type": "code",
+      "source_file": "dev/payload-types.ts"
+    },
+    {
+      "id": "dev_payload_config_ts",
+      "label": "Payload Development Config",
+      "file_type": "code",
+      "source_file": "dev/payload.config.ts"
+    },
+    {
+      "id": "dev_seed_ts",
+      "label": "Database Seeding Script",
+      "file_type": "code",
+      "source_file": "dev/seed.ts"
+    },
+    {
+      "id": "dev_app_payload_layout_tsx",
+      "label": "Admin Panel Layout",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/layout.tsx"
+    },
+    {
+      "id": "dev_app_payload_admin_importmap_js",
+      "label": "Admin Import Map",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/admin/importMap.js"
+    },
+    {
+      "id": "dev_app_payload_admin_segments_page_tsx",
+      "label": "Admin Main View",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/admin/[[...segments]]/page.tsx"
+    },
+    {
+      "id": "dev_app_payload_api_graphql_route_ts",
+      "label": "GraphQL API Route",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/api/graphql/route.ts"
+    },
+    {
+      "id": "dev_app_payload_api_slug_route_ts",
+      "label": "REST API Route",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/api/[...slug]/route.ts"
+    }
+  ],
+  "edges": [
+    {
+      "source": "dev_e2e_spec_ts",
+      "target": "playwright_config_js",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_int_spec_ts",
+      "target": "vitest_config_js",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "dev_payload_types_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_seed_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_graphql_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_slug_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_next_config_mjs",
+      "target": "dev_payload_config_ts",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "dev_environment",
+      "label": "Development Environment Stack",
+      "nodes": [
+        "dev_payload_config_ts",
+        "dev_next_config_mjs",
+        "dev_seed_ts",
+        "dev_app_payload_layout_tsx"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9
+    }
+  ],
+  "input_tokens": 5000,
+  "output_tokens": 1200
+}

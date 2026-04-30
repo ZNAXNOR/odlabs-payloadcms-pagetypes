@@ -1,0 +1,223 @@
+{
+  "communities": {
+    "0": [
+      "dev_app_my_route_route_ts",
+      "dev_app_payload_admin_segments_not_found_tsx",
+      "dev_app_payload_api_graphql_playground_route_ts",
+      "dev_app_payload_api_graphql_route_ts",
+      "dev_app_payload_api_slug_route_ts",
+      "dev_app_payload_layout_tsx",
+      "dev_next_config_mjs",
+      "dev_payload_config_ts",
+      "dev_payload_types_ts",
+      "dev_seed_seed",
+      "dev_seed_ts",
+      "my_route_route_get",
+      "payload_layout_layout",
+      "segments_not_found_generatemetadata",
+      "segments_not_found_notfound"
+    ],
+    "1": [
+      "components_pagetypefield_fetchdata",
+      "src_components_pagetypefield_tsx",
+      "src_enhancecollection_enhancecollection",
+      "src_enhancecollection_ts",
+      "src_hooks_createbeforedeletehook",
+      "src_hooks_createbeforevalidatehook",
+      "src_hooks_ts",
+      "src_tests_hooks_test_ts",
+      "src_types_ts"
+    ],
+    "2": [
+      "dev_collections_pages_ts",
+      "src_index_extractblockrestrictions",
+      "src_index_pagetypesplugin",
+      "src_index_ts",
+      "src_index_validatepluginconfig"
+    ],
+    "3": [
+      "src_admin_widgets_pagetypeshealth_tsx",
+      "src_resolverootpagetype_resolverootpagetype",
+      "src_resolverootpagetype_ts",
+      "src_tests_resolverootpagetype_test_ts",
+      "widgets_pagetypeshealth_pagetypeshealthwidget"
+    ],
+    "4": [
+      "dev_int_spec_ts",
+      "endpoints_customendpointhandler_customendpointhandler",
+      "src_endpoints_customendpointhandler_ts",
+      "vitest_config_js"
+    ],
+    "5": [
+      "dev_app_payload_admin_segments_page_tsx",
+      "segments_page_generatemetadata",
+      "segments_page_page"
+    ],
+    "6": [
+      "dev_helpers_testemailadapter_ts",
+      "helpers_testemailadapter_getstringifiedtoaddress",
+      "helpers_testemailadapter_testemailadapter"
+    ],
+    "7": [
+      "dev_app_payload_admin_importmap_js",
+      "src_exports_client_ts",
+      "src_exports_rsc_ts"
+    ],
+    "8": [
+      "dev_e2e_spec_ts",
+      "playwright_config_js"
+    ],
+    "9": [
+      "src_admin_widgets_quickcreatebutton_tsx",
+      "widgets_quickcreatebutton_quickcreatebutton"
+    ],
+    "10": [
+      "components_beforedashboardclient_beforedashboardclient",
+      "src_components_beforedashboardclient_tsx"
+    ],
+    "11": [
+      "components_beforedashboardserver_beforedashboardserver",
+      "src_components_beforedashboardserver_tsx"
+    ],
+    "12": [
+      "eslint_config_js"
+    ],
+    "13": [
+      "postcss_config_mjs"
+    ],
+    "14": [
+      "dev_next_env_d_ts"
+    ],
+    "15": [
+      "dev_blocks_globalblock_config_ts"
+    ],
+    "16": [
+      "dev_blocks_legalblock_config_ts"
+    ],
+    "17": [
+      "dev_blocks_serviceblock_config_ts"
+    ],
+    "18": [
+      "src_admin_widgets_pagetypeshealthclient_tsx"
+    ],
+    "19": [
+      "src_components_slugdescription_tsx"
+    ],
+    "20": [
+      "readme"
+    ],
+    "21": [
+      "how_it_works"
+    ],
+    "22": [
+      "phase1_docs"
+    ],
+    "23": [
+      "phase3_docs"
+    ]
+  },
+  "cohesion": {
+    "0": 0.13,
+    "1": 0.28,
+    "2": 0.4,
+    "3": 0.4,
+    "4": 0.5,
+    "5": 0.67,
+    "6": 0.67,
+    "7": 0.67,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0
+  },
+  "gods": [
+    {
+      "id": "src_enhancecollection_enhancecollection",
+      "label": "enhanceCollection()",
+      "degree": 3
+    },
+    {
+      "id": "src_hooks_createbeforevalidatehook",
+      "label": "createBeforeValidateHook()",
+      "degree": 2
+    },
+    {
+      "id": "src_hooks_createbeforedeletehook",
+      "label": "createBeforeDeleteHook()",
+      "degree": 2
+    },
+    {
+      "id": "readme",
+      "label": "Project README",
+      "degree": 0
+    },
+    {
+      "id": "how_it_works",
+      "label": "Architecture Guide",
+      "degree": 0
+    },
+    {
+      "id": "phase1_docs",
+      "label": "Phase 1: Core Logic Docs",
+      "degree": 0
+    },
+    {
+      "id": "phase3_docs",
+      "label": "Phase 3: Blocks System Docs",
+      "degree": 0
+    }
+  ],
+  "surprises": [
+    {
+      "source": "enhanceCollection()",
+      "target": "createBeforeValidateHook()",
+      "source_files": [
+        "src\\enhanceCollection.ts",
+        "src\\hooks.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    },
+    {
+      "source": "enhanceCollection()",
+      "target": "createBeforeDeleteHook()",
+      "source_files": [
+        "src\\enhanceCollection.ts",
+        "src\\hooks.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    }
+  ],
+  "questions": [
+    {
+      "type": "verify_inferred",
+      "question": "Are the 2 inferred relationships involving `enhanceCollection()` (e.g. with `createBeforeValidateHook()` and `createBeforeDeleteHook()`) actually correct?",
+      "why": "`enhanceCollection()` has 2 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `Project README`, `Architecture Guide`, `Phase 1: Core Logic Docs` to the rest of the system?",
+      "why": "4 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Community 0` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.13 - nodes in this community are weakly interconnected."
+    }
+  ]
+}

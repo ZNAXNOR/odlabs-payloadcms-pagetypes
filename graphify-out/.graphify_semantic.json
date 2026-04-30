@@ -1,0 +1,421 @@
+{
+  "nodes": [
+    {
+      "id": "eslint_config_js",
+      "label": "ESLint Configuration",
+      "file_type": "code",
+      "source_file": "eslint.config.js"
+    },
+    {
+      "id": "playwright_config_js",
+      "label": "Playwright Configuration",
+      "file_type": "code",
+      "source_file": "playwright.config.js"
+    },
+    {
+      "id": "postcss_config_mjs",
+      "label": "PostCSS Configuration",
+      "file_type": "code",
+      "source_file": "postcss.config.mjs"
+    },
+    {
+      "id": "vitest_config_js",
+      "label": "Vitest Configuration",
+      "file_type": "code",
+      "source_file": "vitest.config.js"
+    },
+    {
+      "id": "dev_e2e_spec_ts",
+      "label": "E2E Tests",
+      "file_type": "code",
+      "source_file": "dev/e2e.spec.ts"
+    },
+    {
+      "id": "dev_int_spec_ts",
+      "label": "Integration Tests",
+      "file_type": "code",
+      "source_file": "dev/int.spec.ts"
+    },
+    {
+      "id": "dev_next_config_mjs",
+      "label": "Next.js Configuration",
+      "file_type": "code",
+      "source_file": "dev/next.config.mjs"
+    },
+    {
+      "id": "dev_payload_types_ts",
+      "label": "Payload Generated Types",
+      "file_type": "code",
+      "source_file": "dev/payload-types.ts"
+    },
+    {
+      "id": "dev_payload_config_ts",
+      "label": "Payload Development Config",
+      "file_type": "code",
+      "source_file": "dev/payload.config.ts"
+    },
+    {
+      "id": "dev_seed_ts",
+      "label": "Database Seeding Script",
+      "file_type": "code",
+      "source_file": "dev/seed.ts"
+    },
+    {
+      "id": "dev_app_payload_layout_tsx",
+      "label": "Admin Panel Layout",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/layout.tsx"
+    },
+    {
+      "id": "dev_app_payload_admin_importmap_js",
+      "label": "Admin Import Map",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/admin/importMap.js"
+    },
+    {
+      "id": "dev_app_payload_admin_segments_page_tsx",
+      "label": "Admin Main View",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/admin/[[...segments]]/page.tsx"
+    },
+    {
+      "id": "dev_app_payload_api_graphql_route_ts",
+      "label": "GraphQL API Route",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/api/graphql/route.ts"
+    },
+    {
+      "id": "dev_app_payload_api_slug_route_ts",
+      "label": "REST API Route",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/api/[...slug]/route.ts"
+    },
+    {
+      "id": "dev_blocks_globalblock_config_ts",
+      "label": "Global Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/GlobalBlock/config.ts"
+    },
+    {
+      "id": "dev_blocks_legalblock_config_ts",
+      "label": "Legal Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/LegalBlock/config.ts"
+    },
+    {
+      "id": "dev_blocks_serviceblock_config_ts",
+      "label": "Service Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/ServiceBlock/config.ts"
+    },
+    {
+      "id": "dev_collections_pages_ts",
+      "label": "Pages Collection",
+      "file_type": "code",
+      "source_file": "dev/collections/Pages.ts"
+    },
+    {
+      "id": "src_enhancecollection_ts",
+      "label": "Collection Enhancer",
+      "file_type": "code",
+      "source_file": "src/enhanceCollection.ts"
+    },
+    {
+      "id": "src_hooks_ts",
+      "label": "Core Plugin Hooks",
+      "file_type": "code",
+      "source_file": "src/hooks.ts"
+    },
+    {
+      "id": "src_index_ts",
+      "label": "Plugin Entry Point",
+      "file_type": "code",
+      "source_file": "src/index.ts"
+    },
+    {
+      "id": "src_resolverootpagetype_ts",
+      "label": "Root Page Resolver",
+      "file_type": "code",
+      "source_file": "src/resolveRootPageType.ts"
+    },
+    {
+      "id": "src_admin_widgets_pagetypeshealth_tsx",
+      "label": "Page Types Health Widget",
+      "file_type": "code",
+      "source_file": "src/admin/widgets/PageTypesHealth.tsx"
+    },
+    {
+      "id": "src_components_pagetypefield_tsx",
+      "label": "Page Type Custom Field",
+      "file_type": "code",
+      "source_file": "src/components/PageTypeField.tsx"
+    },
+    {
+      "id": "src_components_slugdescription_tsx",
+      "label": "Slug Description Component",
+      "file_type": "code",
+      "source_file": "src/components/SlugDescription.tsx"
+    },
+    {
+      "id": "src_exports_client_ts",
+      "label": "Client Side Exports",
+      "file_type": "code",
+      "source_file": "src/exports/client.ts"
+    },
+    {
+      "id": "src_exports_rsc_ts",
+      "label": "Server Side Exports",
+      "file_type": "code",
+      "source_file": "src/exports/rsc.ts"
+    },
+    {
+      "id": "src_tests_hooks_test_ts",
+      "label": "Hooks Unit Tests",
+      "file_type": "code",
+      "source_file": "src/__tests__/hooks.test.ts"
+    },
+    {
+      "id": "src_tests_resolverootpagetype_test_ts",
+      "label": "Resolver Unit Tests",
+      "file_type": "code",
+      "source_file": "src/__tests__/resolveRootPageType.test.ts"
+    },
+    {
+      "id": "readme",
+      "label": "Project README",
+      "file_type": "document",
+      "source_file": "README.md"
+    },
+    {
+      "id": "how_it_works",
+      "label": "Architecture Guide",
+      "file_type": "document",
+      "source_file": "HOW-IT-WORKS.md"
+    },
+    {
+      "id": "phase1_docs",
+      "label": "Phase 1: Core Logic Docs",
+      "file_type": "document",
+      "source_file": "dev-docs/Phase1_CoreLogic.md"
+    },
+    {
+      "id": "phase3_docs",
+      "label": "Phase 3: Blocks System Docs",
+      "file_type": "document",
+      "source_file": "dev-docs/Phase3_BlocksSystem.md"
+    }
+  ],
+  "edges": [
+    {
+      "source": "dev_e2e_spec_ts",
+      "target": "playwright_config_js",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_int_spec_ts",
+      "target": "vitest_config_js",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "dev_payload_types_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_seed_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_graphql_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_slug_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_next_config_mjs",
+      "target": "dev_payload_config_ts",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8
+    },
+    {
+      "source": "src_index_ts",
+      "target": "src_enhancecollection_ts",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "src_hooks_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_hooks_ts",
+      "target": "src_resolverootpagetype_ts",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealth_tsx",
+      "target": "src_resolverootpagetype_ts",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_collections_pages_ts",
+      "target": "src_index_ts",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9
+    },
+    {
+      "source": "src_components_pagetypefield_tsx",
+      "target": "src_hooks_ts",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8
+    },
+    {
+      "source": "src_tests_hooks_test_ts",
+      "target": "plugin_hooks",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_tests_resolverootpagetype_test_ts",
+      "target": "resolve_root",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_exports_client_ts",
+      "target": "plugin_main",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_exports_rsc_ts",
+      "target": "plugin_main",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_components_slugdescription_tsx",
+      "target": "plugin_hooks",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8
+    },
+    {
+      "source": "readme",
+      "target": "plugin_main",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "how_it_works",
+      "target": "resolve_root",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "phase1_docs",
+      "target": "resolve_root",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "phase3_docs",
+      "target": "service_block",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "dev_environment",
+      "label": "Development Environment Stack",
+      "nodes": [
+        "dev_payload_config_ts",
+        "dev_next_config_mjs",
+        "dev_seed_ts",
+        "dev_app_payload_layout_tsx"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9
+    },
+    {
+      "id": "core_logic",
+      "label": "Core Plugin Architecture",
+      "nodes": [
+        "src_index_ts",
+        "src_enhancecollection_ts",
+        "src_hooks_ts",
+        "src_resolverootpagetype_ts"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "id": "documentation",
+      "label": "Project Documentation",
+      "nodes": [
+        "readme",
+        "how_it_works",
+        "phase1_docs",
+        "phase3_docs"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    }
+  ],
+  "input_tokens": 18000,
+  "output_tokens": 4500
+}

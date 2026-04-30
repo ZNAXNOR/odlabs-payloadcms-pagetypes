@@ -1,0 +1,1819 @@
+{
+  "nodes": [
+    {
+      "id": "eslint_config_js",
+      "label": "eslint.config.js",
+      "file_type": "code",
+      "source_file": "eslint.config.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "playwright_config_js",
+      "label": "playwright.config.js",
+      "file_type": "code",
+      "source_file": "playwright.config.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "postcss_config_mjs",
+      "label": "postcss.config.mjs",
+      "file_type": "code",
+      "source_file": "postcss.config.mjs",
+      "source_location": "L1"
+    },
+    {
+      "id": "vitest_config_js",
+      "label": "vitest.config.js",
+      "file_type": "code",
+      "source_file": "vitest.config.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_e2e_spec_ts",
+      "label": "e2e.spec.ts",
+      "file_type": "code",
+      "source_file": "dev\\e2e.spec.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_int_spec_ts",
+      "label": "int.spec.ts",
+      "file_type": "code",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_next_env_d_ts",
+      "label": "next-env.d.ts",
+      "file_type": "code",
+      "source_file": "dev\\next-env.d.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_next_config_mjs",
+      "label": "next.config.mjs",
+      "file_type": "code",
+      "source_file": "dev\\next.config.mjs",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_payload_types_ts",
+      "label": "payload-types.ts",
+      "file_type": "code",
+      "source_file": "dev\\payload-types.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_payload_config_ts",
+      "label": "payload.config.ts",
+      "file_type": "code",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_seed_ts",
+      "label": "seed.ts",
+      "file_type": "code",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_seed_seed",
+      "label": "seed()",
+      "file_type": "code",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L5"
+    },
+    {
+      "id": "dev_app_payload_layout_tsx",
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "payload_layout_layout",
+      "label": "Layout()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L25"
+    },
+    {
+      "id": "dev_app_payload_admin_importmap_js",
+      "label": "importMap.js",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_app_payload_admin_segments_not_found_tsx",
+      "label": "not-found.tsx",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "segments_not_found_generatemetadata",
+      "label": "generateMetadata()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L19"
+    },
+    {
+      "id": "segments_not_found_notfound",
+      "label": "NotFound()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L22"
+    },
+    {
+      "id": "dev_app_payload_admin_segments_page_tsx",
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "segments_page_generatemetadata",
+      "label": "generateMetadata()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L19"
+    },
+    {
+      "id": "segments_page_page",
+      "label": "Page()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L22"
+    },
+    {
+      "id": "dev_app_payload_api_graphql_route_ts",
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\api\\graphql\\route.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_app_payload_api_graphql_playground_route_ts",
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\api\\graphql-playground\\route.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_app_payload_api_slug_route_ts",
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\api\\[...slug]\\route.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_app_my_route_route_ts",
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "my_route_route_get",
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L4"
+    },
+    {
+      "id": "dev_blocks_globalblock_config_ts",
+      "label": "config.ts",
+      "file_type": "code",
+      "source_file": "dev\\blocks\\GlobalBlock\\config.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_blocks_legalblock_config_ts",
+      "label": "config.ts",
+      "file_type": "code",
+      "source_file": "dev\\blocks\\LegalBlock\\config.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_blocks_serviceblock_config_ts",
+      "label": "config.ts",
+      "file_type": "code",
+      "source_file": "dev\\blocks\\ServiceBlock\\config.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_collections_pages_ts",
+      "label": "Pages.ts",
+      "file_type": "code",
+      "source_file": "dev\\collections\\Pages.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "dev_helpers_testemailadapter_ts",
+      "label": "testEmailAdapter.ts",
+      "file_type": "code",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "helpers_testemailadapter_testemailadapter",
+      "label": "testEmailAdapter()",
+      "file_type": "code",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L6"
+    },
+    {
+      "id": "helpers_testemailadapter_getstringifiedtoaddress",
+      "label": "getStringifiedToAddress()",
+      "file_type": "code",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L18"
+    },
+    {
+      "id": "src_enhancecollection_ts",
+      "label": "enhanceCollection.ts",
+      "file_type": "code",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_enhancecollection_enhancecollection",
+      "label": "enhanceCollection()",
+      "file_type": "code",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L13"
+    },
+    {
+      "id": "src_hooks_ts",
+      "label": "hooks.ts",
+      "file_type": "code",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_hooks_createbeforevalidatehook",
+      "label": "createBeforeValidateHook()",
+      "file_type": "code",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L7"
+    },
+    {
+      "id": "src_hooks_createbeforedeletehook",
+      "label": "createBeforeDeleteHook()",
+      "file_type": "code",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L151"
+    },
+    {
+      "id": "src_index_ts",
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_index_extractblockrestrictions",
+      "label": "extractBlockRestrictions()",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L10"
+    },
+    {
+      "id": "src_index_pagetypesplugin",
+      "label": "pageTypesPlugin()",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L35"
+    },
+    {
+      "id": "src_index_validatepluginconfig",
+      "label": "validatePluginConfig()",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L108"
+    },
+    {
+      "id": "src_resolverootpagetype_ts",
+      "label": "resolveRootPageType.ts",
+      "file_type": "code",
+      "source_file": "src\\resolveRootPageType.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_resolverootpagetype_resolverootpagetype",
+      "label": "resolveRootPageType()",
+      "file_type": "code",
+      "source_file": "src\\resolveRootPageType.ts",
+      "source_location": "L9"
+    },
+    {
+      "id": "src_types_ts",
+      "label": "types.ts",
+      "file_type": "code",
+      "source_file": "src\\types.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_admin_widgets_pagetypeshealth_tsx",
+      "label": "PageTypesHealth.tsx",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "widgets_pagetypeshealth_pagetypeshealthwidget",
+      "label": "PageTypesHealthWidget()",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L16"
+    },
+    {
+      "id": "src_admin_widgets_pagetypeshealthclient_tsx",
+      "label": "PageTypesHealthClient.tsx",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\PageTypesHealthClient.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_admin_widgets_quickcreatebutton_tsx",
+      "label": "QuickCreateButton.tsx",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "widgets_quickcreatebutton_quickcreatebutton",
+      "label": "QuickCreateButton()",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L15"
+    },
+    {
+      "id": "src_components_beforedashboardclient_tsx",
+      "label": "BeforeDashboardClient.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_beforedashboardclient_beforedashboardclient",
+      "label": "BeforeDashboardClient()",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L6"
+    },
+    {
+      "id": "src_components_beforedashboardserver_tsx",
+      "label": "BeforeDashboardServer.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_beforedashboardserver_beforedashboardserver",
+      "label": "BeforeDashboardServer()",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L5"
+    },
+    {
+      "id": "src_components_pagetypefield_tsx",
+      "label": "PageTypeField.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_pagetypefield_fetchdata",
+      "label": "fetchData()",
+      "file_type": "code",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L31"
+    },
+    {
+      "id": "src_components_slugdescription_tsx",
+      "label": "SlugDescription.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\SlugDescription.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_endpoints_customendpointhandler_ts",
+      "label": "customEndpointHandler.ts",
+      "file_type": "code",
+      "source_file": "src\\endpoints\\customEndpointHandler.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "endpoints_customendpointhandler_customendpointhandler",
+      "label": "customEndpointHandler()",
+      "file_type": "code",
+      "source_file": "src\\endpoints\\customEndpointHandler.ts",
+      "source_location": "L3"
+    },
+    {
+      "id": "src_exports_client_ts",
+      "label": "client.ts",
+      "file_type": "code",
+      "source_file": "src\\exports\\client.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_exports_rsc_ts",
+      "label": "rsc.ts",
+      "file_type": "code",
+      "source_file": "src\\exports\\rsc.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_tests_hooks_test_ts",
+      "label": "hooks.test.ts",
+      "file_type": "code",
+      "source_file": "src\\__tests__\\hooks.test.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_tests_resolverootpagetype_test_ts",
+      "label": "resolveRootPageType.test.ts",
+      "file_type": "code",
+      "source_file": "src\\__tests__\\resolveRootPageType.test.ts",
+      "source_location": "L1"
+    }
+  ],
+  "edges": [
+    {
+      "source": "eslint_config_js",
+      "target": "eslint_config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "playwright_config_js",
+      "target": "test",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "playwright.config.js",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "vitest_config_js",
+      "target": "path",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vitest.config.js",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "vitest_config_js",
+      "target": "node",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vitest.config.js",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "vitest_config_js",
+      "target": "url",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vitest.config.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "vitest_config_js",
+      "target": "vite_tsconfig_paths",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vitest.config.js",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "vitest_config_js",
+      "target": "config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vitest.config.js",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_e2e_spec_ts",
+      "target": "test",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\e2e.spec.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_int_spec_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_int_spec_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_int_spec_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_int_spec_ts",
+      "target": "vitest",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_int_spec_ts",
+      "target": "src_endpoints_customendpointhandler_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_next_env_d_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_next_dev_types_routes_d_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\next-env.d.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_next_config_mjs",
+      "target": "withpayload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\next.config.mjs",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_next_config_mjs",
+      "target": "url",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\next.config.mjs",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_next_config_mjs",
+      "target": "path",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\next.config.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "db_sqlite",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "richtext_lexical",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "path",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "sharp",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "url",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "plugin_nested_docs",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_index",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_blocks_globalblock_config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_blocks_legalblock_config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_blocks_serviceblock_config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_helpers_testemailadapter",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_payload_config_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_seed",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_seed_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_seed_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_helpers_credentials",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_seed_ts",
+      "target": "dev_seed_seed",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "css",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "layouts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_app_payload_admin_importmap",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_layout_tsx",
+      "target": "payload_layout_layout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "rsc",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "rsc",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "rsc",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "src_exports_client_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "src_exports_client_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "src_exports_rsc_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "rsc",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "next",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "views",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_app_payload_admin_importmap_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "segments_not_found_generatemetadata",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "segments_not_found_notfound",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "next",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "views",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_dev_app_payload_admin_importmap_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "segments_page_generatemetadata",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "segments_page_page",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_graphql_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\graphql\\route.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_graphql_route_ts",
+      "target": "routes",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\graphql\\route.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_graphql_playground_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\graphql-playground\\route.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_graphql_playground_route_ts",
+      "target": "css",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\graphql-playground\\route.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_graphql_playground_route_ts",
+      "target": "routes",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\graphql-playground\\route.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_slug_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\[...slug]\\route.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_slug_route_ts",
+      "target": "css",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\[...slug]\\route.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_payload_api_slug_route_ts",
+      "target": "routes",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\[...slug]\\route.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_my_route_route_ts",
+      "target": "dev_payload_config_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_my_route_route_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_app_my_route_route_ts",
+      "target": "my_route_route_get",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_blocks_globalblock_config_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\blocks\\GlobalBlock\\config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_blocks_legalblock_config_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\blocks\\LegalBlock\\config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_blocks_serviceblock_config_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\blocks\\ServiceBlock\\config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_collections_pages_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\collections\\Pages.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_helpers_testemailadapter_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_helpers_testemailadapter_ts",
+      "target": "helpers_testemailadapter_testemailadapter",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "dev_helpers_testemailadapter_ts",
+      "target": "helpers_testemailadapter_getstringifiedtoaddress",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "path",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "url",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_hooks",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "src_enhancecollection_enhancecollection",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_hooks_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_hooks_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_hooks_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_resolverootpagetype",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_hooks_ts",
+      "target": "src_hooks_createbeforevalidatehook",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_hooks_ts",
+      "target": "src_hooks_createbeforedeletehook",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L151",
+      "weight": 1.0
+    },
+    {
+      "source": "src_index_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_index_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_index_ts",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_enhancecollection",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_index_ts",
+      "target": "src_index_extractblockrestrictions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "src_index_ts",
+      "target": "src_index_pagetypesplugin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "src_index_ts",
+      "target": "src_index_validatepluginconfig",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "src_resolverootpagetype_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\resolveRootPageType.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_resolverootpagetype_ts",
+      "target": "src_resolverootpagetype_resolverootpagetype",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\resolveRootPageType.ts",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealth_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealth_tsx",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealth_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_admin_widgets_pagetypeshealthclient",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealth_tsx",
+      "target": "widgets_pagetypeshealth_pagetypeshealthwidget",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealthclient_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealthClient.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealthclient_tsx",
+      "target": "lucide_react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealthClient.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealthclient_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_exports_client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealthClient.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealthclient_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_admin_widgets_pagetypeshealth_module_css",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealthClient.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_quickcreatebutton_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_quickcreatebutton_tsx",
+      "target": "navigation",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_quickcreatebutton_tsx",
+      "target": "lucide_react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_quickcreatebutton_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_admin_widgets_pagetypeshealth_module_css",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_admin_widgets_quickcreatebutton_tsx",
+      "target": "widgets_quickcreatebutton_quickcreatebutton",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_beforedashboardclient_tsx",
+      "target": "ui",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_beforedashboardclient_tsx",
+      "target": "shared",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_beforedashboardclient_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_beforedashboardclient_tsx",
+      "target": "components_beforedashboardclient_beforedashboardclient",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_beforedashboardserver_tsx",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_beforedashboardserver_tsx",
+      "target": "c_users_omkar_desktop_omkar_visualstudiocode_odlabs_payloadcms_pagetypes_src_components_beforedashboardserver_module_css",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_beforedashboardserver_tsx",
+      "target": "components_beforedashboardserver_beforedashboardserver",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_pagetypefield_tsx",
+      "target": "ui",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_pagetypefield_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_pagetypefield_tsx",
+      "target": "components_pagetypefield_fetchdata",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_slugdescription_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\SlugDescription.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_slugdescription_tsx",
+      "target": "ui",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\SlugDescription.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_slugdescription_tsx",
+      "target": "lucide_react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\SlugDescription.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_endpoints_customendpointhandler_ts",
+      "target": "payload",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\endpoints\\customEndpointHandler.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_endpoints_customendpointhandler_ts",
+      "target": "endpoints_customendpointhandler_customendpointhandler",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\endpoints\\customEndpointHandler.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_hooks_test_ts",
+      "target": "vitest",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\hooks.test.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_hooks_test_ts",
+      "target": "src_types_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\hooks.test.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_hooks_test_ts",
+      "target": "src_hooks_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\hooks.test.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_resolverootpagetype_test_ts",
+      "target": "vitest",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\resolveRootPageType.test.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_resolverootpagetype_test_ts",
+      "target": "src_resolverootpagetype_ts",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\resolveRootPageType.test.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_enhancecollection",
+      "target": "src_hooks_createbeforevalidatehook",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L143",
+      "weight": 1.0
+    },
+    {
+      "source": "src_enhancecollection_enhancecollection",
+      "target": "src_hooks_createbeforedeletehook",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L144",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -1,0 +1,5052 @@
+--- FILE: src/components/SlugDescription.tsx ---
+'use client'
+import React from 'react'
+import { useFormFields, useDocumentInfo } from '@payloadcms/ui'
+import { AlertCircle } from 'lucide-react'
+
+export const SlugDescription: React.FC<any> = (props) => {
+  const { path } = props
+  const fields = useFormFields(([fields]) => fields)
+
+  const slugValue = fields.slug?.value as string
+  const pageTypeValue = fields.pageType?.value as string
+  const parentValue = fields.parent?.value
+
+  React.useEffect(() => {
+    console.log('SlugDescription trace:', { slugValue, pageTypeValue, parentValue })
+  }, [slugValue, pageTypeValue, parentValue])
+
+  const isRoot = !parentValue
+  const mismatch = isRoot && pageTypeValue && slugValue && slugValue !== pageTypeValue
+
+  if (!mismatch) {
+    return null
+  }
+
+  return (
+    <div style={{ marginTop: '-10px', marginBottom: '10px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        color: 'var(--theme-warning-500)',
+        padding: '10px',
+        backgroundColor: 'rgba(255, 165, 0, 0.05)',
+        borderRadius: '6px',
+        border: '1px solid var(--theme-warning-500)',
+        fontSize: '0.85rem',
+        lineHeight: '1.4'
+      }}>
+        <AlertCircle size={18} style={{ flexShrink: 0 }} />
+        <span>
+          <strong>Slug Mismatch:</strong> This root page should ideally use <code>"{pageTypeValue}"</code> as its slug.
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export default SlugDescription
+
+
+--- FILE: src/endpoints/customEndpointHandler.ts ---
+import type { PayloadHandler } from 'payload'
+
+export const customEndpointHandler: PayloadHandler = () => {
+  return Response.json({ message: 'Hello from custom endpoint' })
+}
+
+
+--- FILE: src/exports/client.ts ---
+export { BeforeDashboardClient } from '../components/BeforeDashboardClient'
+export { PageTypeField } from '../components/PageTypeField'
+export { SlugDescription } from '../components/SlugDescription'
+export { QuickCreateButton } from '../admin/widgets/QuickCreateButton'
+
+
+--- FILE: src/exports/rsc.ts ---
+export { BeforeDashboardServer } from '../components/BeforeDashboardServer'
+export { default as PageTypesHealthWidget } from '../admin/widgets/PageTypesHealth'
+
+
+--- FILE: src/__tests__/hooks.test.ts ---
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+
+import type { PluginConfig } from '../types.js'
+
+import { createBeforeDeleteHook, createBeforeValidateHook } from '../hooks.js'
+
+const mockConfig: PluginConfig = {
+  collectionSlug: 'pages',
+  enforceRootSlug: true,
+  pageTypes: [
+    { slug: 'services', label: 'Services', required: true },
+    { slug: 'legal', label: 'Legal', required: false }
+  ],
+  restrictions: [
+    { allowedPageTypes: ['services'], block: 'hero' }
+  ],
+}
+
+describe('beforeValidate hook', () => {
+  let hook: any
+  let mockReq: any
+
+  beforeEach(() => {
+    hook = createBeforeValidateHook(mockConfig)
+    mockReq = {
+      payload: {
+        find: vi.fn().mockResolvedValue({ totalDocs: 0 }),
+        findByID: vi.fn()
+      },
+      user: { id: 'admin' }
+    }
+  })
+
+  test('allows root without pageType (Simple Page)', async () => {
+    const data = { pageType: '', parent: null }
+    const result = await hook({
+      data,
+      req: mockReq
+    })
+    expect(result.pageType).toBe('')
+  })
+
+  test('throws if pageType not in config', async () => {
+    await expect(
+      hook({
+        data: { pageType: 'invalid', parent: null },
+        req: mockReq
+      })
+    ).rejects.toThrow(/Invalid pageType/)
+  })
+
+  test('allows child without pageType (computed from root)', async () => {
+    mockReq.payload.findByID
+      .mockResolvedValueOnce({
+        id: 'root-1',
+        pageType: 'services',
+        parent: null,
+      })
+
+    const data = { layout: [], pageType: null, parent: 'root-1' }
+
+    await hook({
+      data,
+      req: mockReq
+    })
+
+    expect(data.pageType).toBe('services')
+  })
+
+  test('validates blocks against pageType', async () => {
+    await expect(
+      hook({
+        data: {
+          slug: 'legal',
+          layout: [{ blockType: 'hero' }],
+          pageType: 'legal',
+          parent: null,
+        },
+        req: mockReq
+      })
+    ).rejects.toThrow(/not allowed on/)
+  })
+
+  test('allows blocks not in restrictions', async () => {
+    const data = {
+      slug: 'services',
+      layout: [
+        { blockType: 'hero' },
+        { blockType: 'custom-block' }, // Not restricted
+      ],
+      pageType: 'services',
+      parent: null,
+    }
+
+    await hook({ data, req: mockReq })
+    // Should not throw
+  })
+})
+
+describe('beforeDelete hook', () => {
+  let hook: any
+  let mockReq: any
+
+  beforeEach(() => {
+    hook = createBeforeDeleteHook(mockConfig)
+    mockReq = {
+      payload: {
+        find: vi.fn(),
+        findByID: vi.fn()
+      },
+      user: { id: 'admin' }
+    }
+  })
+
+  test('throws if deleting required root', async () => {
+    mockReq.payload.findByID.mockResolvedValue({ id: 'root-1', pageType: 'services', parent: null })
+    mockReq.payload.find.mockResolvedValue({ totalDocs: 0 })
+
+    await expect(
+      hook({
+        id: 'root-1',
+        req: mockReq
+      })
+    ).rejects.toThrow(/Cannot delete.*required/)
+  })
+
+  test('throws if root has children', async () => {
+    mockReq.payload.findByID.mockResolvedValue({ id: 'root-1', pageType: 'legal', parent: null })
+    mockReq.payload.find.mockResolvedValue({ totalDocs: 5 })
+
+    await expect(
+      hook({
+        id: 'root-1',
+        req: mockReq
+      })
+    ).rejects.toThrow(/has.*child/)
+  })
+
+  test('allows delete of non-required root with no children', async () => {
+    mockReq.payload.findByID.mockResolvedValue({ id: 'root-1', pageType: 'legal', parent: null })
+    mockReq.payload.find.mockResolvedValue({ totalDocs: 0 })
+
+    await expect(
+      hook({
+        id: 'root-1',
+        req: mockReq
+      })
+    ).resolves.not.toThrow()
+  })
+})
+
+
+--- FILE: src/__tests__/resolveRootPageType.test.ts ---
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+
+import { resolveRootPageType } from '../resolveRootPageType.js'
+
+describe('resolveRootPageType', () => {
+  // Mock req object for tests
+  const mockReq = {
+    payload: {
+      findByID: vi.fn()
+    }
+  } as any
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test('returns pageType of root when page is root', async () => {
+    mockReq.payload.findByID.mockResolvedValue({
+      id: 'root-1',
+      pageType: 'services',
+      parent: null
+    })
+
+    const result = await resolveRootPageType({
+      id: 'root-1',
+      collectionSlug: 'pages',
+      req: mockReq
+    })
+
+    expect(result).toBe('services')
+  })
+
+  test('traverses parent chain and returns root pageType', async () => {
+    // Simulate: child → parent → root
+    mockReq.payload.findByID
+      .mockResolvedValueOnce({
+        id: 'child-1',
+        pageType: null, // Not set on child (should be ignored)
+        parent: 'parent-1'
+      })
+      .mockResolvedValueOnce({
+        id: 'parent-1',
+        pageType: null,
+        parent: 'root-1'
+      })
+      .mockResolvedValueOnce({
+        id: 'root-1',
+        pageType: 'services',
+        parent: null
+      })
+
+    const result = await resolveRootPageType({
+      id: 'child-1',
+      collectionSlug: 'pages',
+      req: mockReq
+    })
+
+    expect(result).toBe('services')
+    expect(mockReq.payload.findByID).toHaveBeenCalledTimes(3)
+  })
+
+  test('detects circular parent reference', async () => {
+    // Simulate: a → b → a (cycle)
+    mockReq.payload.findByID
+      .mockResolvedValueOnce({
+        id: 'a',
+        parent: 'b'
+      })
+      .mockResolvedValueOnce({
+        id: 'b',
+        parent: 'a'
+      })
+
+    await expect(
+      resolveRootPageType({
+        id: 'a',
+        collectionSlug: 'pages',
+        req: mockReq
+      })
+    ).rejects.toThrow(/Circular parent reference/)
+  })
+
+  test('throws when parent is missing/deleted', async () => {
+    mockReq.payload.findByID
+      .mockResolvedValueOnce({
+        id: 'child-1',
+        parent: 'deleted-parent'
+      })
+      .mockRejectedValueOnce(new Error('Not found'))
+
+    await expect(
+      resolveRootPageType({
+        id: 'child-1',
+        collectionSlug: 'pages',
+        req: mockReq
+      })
+    ).rejects.toThrow(/not found or deleted/)
+  })
+
+  test('throws when root has no pageType', async () => {
+    mockReq.payload.findByID.mockResolvedValue({
+      id: 'root-1',
+      pageType: null,
+      parent: null
+    })
+
+    await expect(
+      resolveRootPageType({
+        id: 'root-1',
+        collectionSlug: 'pages',
+        req: mockReq
+      })
+    ).rejects.toThrow(/missing or empty pageType/)
+  })
+
+  test('rejects empty string pageType on root', async () => {
+    mockReq.payload.findByID.mockResolvedValue({
+      id: 'root-1',
+      pageType: '   ',
+      parent: null
+    })
+
+    await expect(
+      resolveRootPageType({
+        id: 'root-1',
+        collectionSlug: 'pages',
+        req: mockReq
+      })
+    ).rejects.toThrow(/missing or empty pageType/)
+  })
+
+  test('handles deep nesting (10+ levels)', async () => {
+    // Create chain: page-10 → page-9 → ... → page-1 → root
+    for (let i = 10; i > 0; i--) {
+      mockReq.payload.findByID.mockResolvedValueOnce({
+        id: `page-${i}`,
+        pageType: null,
+        parent: i === 1 ? 'root' : `page-${i - 1}`
+      })
+    }
+
+    mockReq.payload.findByID.mockResolvedValueOnce({
+      id: 'root',
+      pageType: 'services',
+      parent: null
+    })
+
+    const result = await resolveRootPageType({
+      id: 'page-10',
+      collectionSlug: 'pages',
+      req: mockReq
+    })
+
+    expect(result).toBe('services')
+  })
+})
+
+
+--- FILE: CONTRIBUTING.md ---
+# Contributing
+
+## Local development
+
+1. Copy `dev/.env.example` to `dev/.env`.
+2. Install dependencies with `pnpm install`.
+3. Start the template with `pnpm dev`.
+4. Sign in at `http://localhost:3000/admin` with `dev@payloadcms.com` / `test`.
+
+The local app uses SQLite by default, so no extra database service is required.
+
+## Project Structure
+
+| File | Purpose |
+|------|---------|
+| `src/index.ts` | Plugin entry point |
+| `src/enhanceCollection.ts` | Injects field, hooks, admin overrides |
+| `src/resolveRootPageType.ts` | Resolves root safely (cycle + corruption safe) |
+| `src/hooks.ts` | Core validation + deletion logic |
+| `src/admin/components/` | Admin UI components (Field overrides, Widgets) |
+
+## Implementation Roadmap
+
+1. **Hooks (`src/hooks.ts`)** — Implement validation logic for save/delete.
+2. **Collection Enhancement (`src/enhanceCollection.ts`)** — Inject `pageType` field.
+3. **Blocks Override** — UI-level filtering in admin panel.
+4. **Nested Docs Integration** — Ensure compatibility with `@payloadcms/plugin-nested-docs`.
+5. **Admin Widget** — Health checks and quick creation actions.
+
+## Core Logic & Architecture
+
+### Root Resolution
+- Walks parent chain to the absolute root.
+- Detects circular references and iteration limits.
+- Handles missing or deleted nodes explicitly.
+- The root node is always authoritative for the entire branch's `pageType`.
+
+### Validation Guarantees
+- No duplicate roots per `pageType`.
+- No invalid block configurations (checked against root `pageType`).
+- No broken or circular hierarchies.
+- No silent data corruption during saves.
+
+
+## Working conventions
+
+- Keep `website/` as donor reference only. Make implementation changes inside `plugin/`.
+- Treat `dev/` as the branded preview app for the plugin package, not as a second independent product.
+- Keep sample content lean. Bootstrap seed should stay minimal and idempotent.
+- New sample content must remain optional behind the existing env flags.
+- Do not reintroduce the removed donor plugins unless that is a deliberate template feature.
+
+## Regenerating generated files
+
+Run this after schema or admin component changes:
+
+```bash
+pnpm generate:all
+```
+## Tests
+
+Run the full suite before opening a release or publish PR:
+
+```bash
+pnpm test:int
+```
+
+```bash
+pnpm test:e2e
+```
+
+```bash
+pnpm lint
+```
+
+## Publish checklist
+
+Before publishing a package draft, update:
+
+- `package.json` package metadata
+- self-import package name references inside `dev/`
+- runtime metadata env values used by the dashboard preview
+- README installation and usage examples
+
+## Pull requests
+
+Please keep pull requests focused and include:
+
+- a short summary of user-facing changes
+- any env or migration implications
+- test coverage notes
+- screenshots when dashboard or frontend visuals changed
+
+
+--- FILE: HOW-IT-WORKS.md ---
+# How It Works
+
+## Block Restrictions
+
+Blocks declare their own page type restrictions in component config:
+
+### Example Block
+
+```ts
+// In Pages collection config
+{
+  name: 'layout',
+  type: 'blocks',
+  blocks: [
+    {
+      slug: 'hero',
+      label: 'Hero',
+      allowedPageTypes: ['services'],  // ← Block declares this
+      fields: [
+        { name: 'title', type: 'text' },
+        { name: 'image', type: 'upload' }
+      ]
+    }
+  ]
+}
+```
+
+### How Plugin Uses It
+
+When enhanceCollection runs:
+1. Scans all blocks in layout field
+2. Finds blocks with allowedPageTypes property
+3. Extracts into restrictions array
+4. Uses restrictions for validation
+
+### Result
+
+Block and restriction are co-located.
+Single source of truth.
+Easy to modify — change block config, restriction updates automatically.
+
+## Database
+
+This project uses **SQLite** for development.
+
+- Database file: `./dev/payload.db`
+- CLI: `sqlite3 dev/payload.db`
+- Queries: `SELECT * FROM pages WHERE slug = 'services';`
+
+
+--- FILE: README.md ---
+# Payload Page Types Plugin
+
+A Payload CMS v3 plugin that enforces structured page types, hierarchical consistency, and block-level restrictions.
+
+## Features
+
+* **Page Type System**: Define strict root-level page types (e.g., `services`, `legal`) with automatic inheritance for all descendants.
+* **Block Restrictions**: Restrict specific blocks to specific page types (e.g., `hero` only allowed on `services`).
+* **Hierarchy Enforcement**: 
+    * Exactly one root per page type.
+    * Prevent circular parent relationships.
+    * Protect required roots from deletion.
+* **Server-Side Validation**: All rules enforced in `beforeValidate` and `beforeDelete` hooks.
+* **Admin Health Widget**: Detects missing or duplicate root pages with quick action shortcuts.
+* **Reactive UI**: Admin panel filters available blocks dynamically based on the current page's resolved page type.
+
+## Installation
+
+```bash
+pnpm add @od-labs/payload-pagetypes
+```
+
+## Usage
+
+Register the plugin in your Payload config:
+
+```ts
+import { pageTypesPlugin } from '@od-labs/payload-pagetypes'
+
+export default buildConfig({
+  collections: [Pages],
+  plugins: [
+    pageTypesPlugin({
+      collectionSlug: 'pages',
+      pageTypes: [
+        { slug: 'services', label: 'Services', required: true },
+        { slug: 'legal', label: 'Legal', required: true }
+      ],
+      enforceRootSlug: true
+    })
+  ]
+})
+```
+
+### Block-level Restrictions
+
+Blocks declare their own `allowedPageTypes` in their `custom` config:
+
+```ts
+const HeroBlock = {
+  slug: 'hero',
+  custom: {
+    allowedPageTypes: ['services'], // Only allowed under a 'Services' root page
+  },
+  fields: [...]
+}
+```
+
+The plugin automatically extracts these restrictions and enforces them at both the UI and server levels.
+
+## Configuration
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `collectionSlug` | `string` | The slug of the collection to apply page types to (usually `pages`). |
+| `pageTypes` | `PageType[]` | List of allowed root page types. |
+| `enforceRootSlug` | `boolean` | If true, root pages must have a slug matching their `pageType`. |
+
+### PageType Object
+```ts
+{
+  slug: string      // Unique identifier for the page type
+  label: string     // Human-readable label
+  required?: boolean // If true, the root page cannot be deleted
+}
+```
+
+## Behavior
+
+### Root Pages
+- Must define a `pageType`.
+- Only one root page is allowed per type.
+- Cannot be deleted if marked `required` or if they have child pages.
+
+### Child Pages
+- `pageType` is automatically inherited from the absolute root ancestor.
+- Inherited `pageType` is read-only and managed by the plugin.
+- Safe across deep nesting and handles parent changes automatically.
+
+### Validation
+- Validation runs on every save.
+- If a root's `pageType` is changed, all blocks in the hierarchy are re-validated.
+- If invalid blocks exist, the save will fail, and the user must remove or replace the restricted blocks.
+
+## Migration Guide
+
+1. **Deploy Plugin**: Add the plugin to your config.
+2. **Create Roots**: Use the **Page Types Health** widget on the dashboard to identify and create missing root pages.
+3. **Assign Parents**: Ensure existing pages are correctly nested under the appropriate root.
+4. **Clean Content**: Remove blocks from pages that are no longer allowed in their new hierarchy.
+
+## Limitations
+- Optimized for Payload v3.
+- Requires `@payloadcms/plugin-nested-docs` for parent relationship management.
+- Currently supports a single collection (MVP scope).
+
+## Contributing
+
+For local development setup, testing, and contribution guidelines, please see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## License
+
+MIT © [OD LABS](https://github.com/ZNAXNOR)
+
+--- FILE: dev-docs/Phase0_Setup.md ---
+# Phase 0 — Setup (Using Official Template)
+
+**Goal:** Initialize plugin repository and configure for development
+
+---
+
+## Overview
+
+Phase 0 uses the official Payload plugin template to bootstrap the project structure. This template includes:
+
+- Pre-configured build tooling
+- Dev environment wired to Payload
+- TypeScript setup
+- Export patterns
+
+You build in `/src`, test in `/dev`.
+
+---
+
+## Step 0.1 — Clone Template
+
+```bash
+git clone https://github.com/payloadcms/plugin-template
+cd plugin-template
+```
+
+Verify directory structure:
+
+```
+plugin-template/
+├── src/
+│   └── index.ts
+├── dev/
+│   ├── payload.config.ts
+│   ├── db/
+│   └── seed.ts
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## Step 0.2 — Configure Package Metadata
+
+Edit `package.json`:
+
+```json
+{
+  "name": "@od-labs/payload-pagetypes",
+  "version": "0.0.1",
+  "description": "Payload CMS plugin for enforcing page types and block restrictions",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "keywords": ["payload", "cms", "plugin", "page-types", "hierarchy"],
+  "devDependencies": {
+    "@payloadcms/db-sqlite": "^1.0.0"
+  }
+}
+```
+
+Update the main export in `src/index.ts`:
+
+```ts
+export const pageTypesPlugin = (pluginConfig) => (config) => {
+  // Implementation in Phase 2
+  return config
+}
+
+export type { PluginConfig } from './types'
+```
+
+---
+
+## Step 0.3 — Install Dependencies
+
+```bash
+npm install
+```
+
+Verify dev environment starts:
+
+```bash
+npm run dev
+```
+
+You should see:
+
+```
+Payload CMS v3 started
+http://localhost:3000/admin
+```
+
+Log in with template credentials (check `/dev/seed.ts`).
+
+---
+
+## Step 0.4 — Understand Template Structure
+
+### `/src` — Plugin Code
+
+Your plugin implementation goes here.
+
+```
+src/
+├── index.ts              ← Plugin entry point
+├── types.ts              ← TypeScript interfaces
+├── enhanceCollection.ts  ← Collection enhancement logic
+├── hooks.ts              ← Validation hooks
+├── resolveRootPageType.ts ← Core utility
+└── admin/
+    ├── FilteredBlocksField.tsx
+    └── Widget.tsx
+```
+
+### `/dev` — Local Payload App
+
+This is a complete Payload CMS app for testing your plugin.
+
+```
+dev/
+├── payload.config.ts     ← Registers plugin
+├── collections/
+│   └── Pages.ts          ← Test collection
+└── seed.ts               ← Demo data
+```
+
+---
+
+## Step 0.5 — Wire Plugin into Dev App
+
+Edit `dev/payload.config.ts`:
+
+```ts
+import { pageTypesPlugin } from '../src'
+
+export default buildConfig({
+  collections: [Pages],
+
+  plugins: [
+    pageTypesPlugin({
+      collectionSlug: 'pages',
+      pageTypes: [
+        { slug: 'services', label: 'Services', required: true },
+        { slug: 'legal', label: 'Legal', required: true },
+      ],
+      enforceRootSlug: true,
+      // Note: restrictions auto-extracted from block configs
+    }),
+  ],
+})
+```
+
+This will fail until Phase 2 implements the plugin export properly. That's fine — you'll circle back.
+
+---
+
+## Step 0.6 — Create Pages Collection (if not exists)
+
+Create `dev/collections/Pages.ts`:
+
+```ts
+import { CollectionConfig } from 'payload'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+    },
+    {
+      name: 'layout',
+      type: 'blocks',
+      blocks: [
+        {
+          slug: 'hero',
+          label: 'Hero',
+          allowedPageTypes: ['services'], // ← NEW: Block declares its own restrictions
+          fields: [{ name: 'title', type: 'text', required: true }],
+        },
+        {
+          slug: 'testimonials',
+          label: 'Testimonials',
+          allowedPageTypes: ['services', 'blog'], // ← NEW
+          fields: [{ name: 'items', type: 'array', fields: [] }],
+        },
+      ],
+    },
+  ],
+}
+```
+
+Register in `payload.config.ts`:
+
+```ts
+import { Pages } from './collections/Pages'
+
+export default buildConfig({
+  collections: [Pages],
+  // ...
+})
+```
+
+---
+
+## Step 0.7 — Add TypeScript Types File
+
+Create `src/types.ts`:
+
+```ts
+export type PageType = {
+  slug: string
+  label: string
+  required?: boolean
+}
+
+export type BlockRestriction = {
+  block: string
+  allowedPageTypes: string[]
+}
+
+export type PluginConfig = {
+  collectionSlug: string
+  pageTypes: PageType[]
+  restrictions?: BlockRestriction[]
+  enforceRootSlug?: boolean
+}
+
+export type PluginOptions = PluginConfig
+```
+
+---
+
+## Step 0.8 — Verify Setup
+
+Build the plugin:
+
+```bash
+npm run build
+```
+
+**Explanation:**
+Blocks now declare `allowedPageTypes` directly in their config. The plugin automatically extracts these restrictions during initialization. This means you no longer need a manual `restrictions` array in the plugin configuration.
+
+No errors = you're ready for Phase 1.
+
+---
+
+## Checklist
+
+- [x] Cloned plugin template
+- [x] Updated `package.json` with plugin name
+- [x] Installed dependencies
+- [x] Dev environment runs (`npm run dev`)
+- [x] Pages collection created in `/dev`
+- [x] Plugin entry configured in `payload.config.ts`
+- [x] Types file created
+- [x] Build completes without errors
+
+---
+
+## Next
+
+→ Phase 1: Core Logic (`resolveRootPageType`, hooks)
+
+
+--- FILE: dev-docs/Phase1_CoreLogic.md ---
+# Phase 1 — Core Logic (MOST IMPORTANT)
+
+**Goal:** Implement root resolution, cycle detection, and validation hooks
+
+**⚠️ Important:** Phase 1 is the foundation. Everything depends on this working correctly.
+
+---
+
+## Overview
+
+Phase 1 implements three critical pieces:
+
+1. **`resolveRootPageType`** — Safe root ancestor traversal
+2. **`beforeValidate` hook** — Enforce all rules
+3. **`beforeDelete` hook** — Protect roots
+
+Test rigorously before moving to Phase 2.
+
+---
+
+## Step 1.1 — Implement `resolveRootPageType.ts`
+
+This is the most important utility. It must handle:
+
+- Parent chain traversal
+- Circular reference detection
+- Missing/deleted nodes
+- Root validation
+
+### Create file: `src/resolveRootPageType.ts`
+
+```ts
+import { PayloadRequest } from 'payload'
+
+export interface ResolveRootPageTypeArgs {
+  id: string | number
+  req: PayloadRequest
+  collectionSlug: string
+}
+
+export async function resolveRootPageType({
+  id,
+  req,
+  collectionSlug,
+}: ResolveRootPageTypeArgs): Promise<string> {
+  const visited = new Set<string | number>()
+  let currentId = id
+
+  // Safety: limit iterations to prevent infinite loops
+  const MAX_ITERATIONS = 100
+
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    // Cycle detection: if we've seen this ID before, there's a cycle
+    if (visited.has(currentId)) {
+      throw new Error(`Circular parent reference detected starting at ${id}. Check page hierarchy.`)
+    }
+
+    visited.add(currentId)
+
+    // Fetch the current page
+    let current
+    try {
+      current = await req.payload.findByID({
+        collection: collectionSlug,
+        id: currentId,
+        depth: 0,
+      })
+    } catch (err) {
+      throw new Error(
+        `Parent page ${currentId} not found or deleted. Broken hierarchy at page ${id}.`,
+      )
+    }
+
+    if (!current) {
+      throw new Error(`Parent page ${currentId} returned null. Broken hierarchy at page ${id}.`)
+    }
+
+    // If no parent, we've reached the root
+    if (!current.parent) {
+      // Validate that root has pageType
+      if (!current.pageType || !current.pageType.trim()) {
+        throw new Error(
+          `Root page ${currentId} missing or empty pageType. Data corruption detected.`,
+        )
+      }
+
+      return current.pageType
+    }
+
+    // Move to parent for next iteration
+    currentId = current.parent
+  }
+
+  // Reached iteration limit
+  throw new Error(
+    `Page hierarchy too deep (>100 levels). Check for accidental cycles or malformed data.`,
+  )
+}
+```
+
+### Test cases for `resolveRootPageType`
+
+Create `src/__tests__/resolveRootPageType.test.ts`:
+
+```ts
+import { resolveRootPageType } from '../resolveRootPageType'
+
+describe('resolveRootPageType', () => {
+  // Mock req object for tests
+  const mockReq = {
+    payload: {
+      findByID: jest.fn(),
+    },
+  } as any
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  test('returns pageType of root when page is root', async () => {
+    mockReq.payload.findByID.mockResolvedValue({
+      id: 'root-1',
+      parent: null,
+      pageType: 'services',
+    })
+
+    const result = await resolveRootPageType({
+      id: 'root-1',
+      req: mockReq,
+      collectionSlug: 'pages',
+    })
+
+    expect(result).toBe('services')
+  })
+
+  test('traverses parent chain and returns root pageType', async () => {
+    // Simulate: child → parent → root
+    mockReq.payload.findByID
+      .mockResolvedValueOnce({
+        id: 'child-1',
+        parent: 'parent-1',
+        pageType: null, // Not set on child (should be ignored)
+      })
+      .mockResolvedValueOnce({
+        id: 'parent-1',
+        parent: 'root-1',
+        pageType: null,
+      })
+      .mockResolvedValueOnce({
+        id: 'root-1',
+        parent: null,
+        pageType: 'services',
+      })
+
+    const result = await resolveRootPageType({
+      id: 'child-1',
+      req: mockReq,
+      collectionSlug: 'pages',
+    })
+
+    expect(result).toBe('services')
+    expect(mockReq.payload.findByID).toHaveBeenCalledTimes(3)
+  })
+
+  test('detects circular parent reference', async () => {
+    // Simulate: a → b → a (cycle)
+    mockReq.payload.findByID
+      .mockResolvedValueOnce({
+        id: 'a',
+        parent: 'b',
+      })
+      .mockResolvedValueOnce({
+        id: 'b',
+        parent: 'a',
+      })
+
+    await expect(
+      resolveRootPageType({
+        id: 'a',
+        req: mockReq,
+        collectionSlug: 'pages',
+      }),
+    ).rejects.toThrow(/Circular parent reference/)
+  })
+
+  test('throws when parent is missing/deleted', async () => {
+    mockReq.payload.findByID
+      .mockResolvedValueOnce({
+        id: 'child-1',
+        parent: 'deleted-parent',
+      })
+      .mockRejectedValueOnce(new Error('Not found'))
+
+    await expect(
+      resolveRootPageType({
+        id: 'child-1',
+        req: mockReq,
+        collectionSlug: 'pages',
+      }),
+    ).rejects.toThrow(/not found or deleted/)
+  })
+
+  test('throws when root has no pageType', async () => {
+    mockReq.payload.findByID.mockResolvedValue({
+      id: 'root-1',
+      parent: null,
+      pageType: null,
+    })
+
+    await expect(
+      resolveRootPageType({
+        id: 'root-1',
+        req: mockReq,
+        collectionSlug: 'pages',
+      }),
+    ).rejects.toThrow(/missing or empty pageType/)
+  })
+
+  test('rejects empty string pageType on root', async () => {
+    mockReq.payload.findByID.mockResolvedValue({
+      id: 'root-1',
+      parent: null,
+      pageType: '   ', // Whitespace only
+    })
+
+    await expect(
+      resolveRootPageType({
+        id: 'root-1',
+        req: mockReq,
+        collectionSlug: 'pages',
+      }),
+    ).rejects.toThrow(/missing or empty pageType/)
+  })
+
+  test('handles deep nesting (10+ levels)', async () => {
+    // Create chain: page-10 → page-9 → ... → page-1 → root
+    for (let i = 10; i > 0; i--) {
+      mockReq.payload.findByID.mockResolvedValueOnce({
+        id: `page-${i}`,
+        parent: i === 1 ? 'root' : `page-${i - 1}`,
+        pageType: null,
+      })
+    }
+
+    mockReq.payload.findByID.mockResolvedValueOnce({
+      id: 'root',
+      parent: null,
+      pageType: 'services',
+    })
+
+    const result = await resolveRootPageType({
+      id: 'page-10',
+      req: mockReq,
+      collectionSlug: 'pages',
+    })
+
+    expect(result).toBe('services')
+  })
+})
+```
+
+---
+
+## Step 1.2 — Implement `beforeValidate` Hook
+
+Create `src/hooks.ts`:
+
+```ts
+import { BeforeValidateHook } from 'payload'
+import { resolveRootPageType } from './resolveRootPageType'
+import { PluginConfig } from './types'
+
+export const createBeforeValidateHook = (config: PluginConfig): BeforeValidateHook => {
+  return async ({ data, req, originalDoc }) => {
+    const { collectionSlug, pageTypes, restrictions, enforceRootSlug } = config
+
+    // ─────────────────────────────────────────────────────────────
+    // ROOT PAGE VALIDATION
+    // ─────────────────────────────────────────────────────────────
+
+    if (!data.parent) {
+      // Rule 1: Root must define pageType
+      if (!data.pageType || !data.pageType.trim()) {
+        throw new Error(
+          'Root pages must define a pageType. Choose from: ' +
+            pageTypes.map((t) => t.label).join(', '),
+        )
+      }
+
+      const trimmedType = data.pageType.trim()
+      data.pageType = trimmedType
+
+      // Rule 2: Validate pageType is in config
+      const validType = pageTypes.find((t) => t.slug === trimmedType)
+      if (!validType) {
+        throw new Error(
+          `Invalid pageType "${trimmedType}". Valid types: ${pageTypes.map((t) => t.slug).join(', ')}`,
+        )
+      }
+
+      // Rule 3: Enforce slug matches pageType (if enabled)
+      if (enforceRootSlug && data.slug !== trimmedType) {
+        throw new Error(
+          `For root pages, slug must match pageType. ` +
+            `Set slug to "${trimmedType}" or disable enforceRootSlug.`,
+        )
+      }
+
+      // Rule 4: Prevent duplicate roots (only on create and on type change)
+      const isTypeChanged = originalDoc && originalDoc.pageType !== trimmedType
+
+      if (!originalDoc || isTypeChanged) {
+        const existing = await req.payload.find({
+          collection: collectionSlug,
+          where: {
+            parent: { exists: false },
+            pageType: { equals: trimmedType },
+            ...(originalDoc ? { id: { not_equals: originalDoc.id } } : {}),
+          },
+          limit: 1,
+        })
+
+        if (existing.totalDocs > 0) {
+          throw new Error(
+            `A root page already exists for page type "${validType.label}". ` +
+              `Only one root per type is allowed.`,
+          )
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CHILD PAGE VALIDATION
+    // ─────────────────────────────────────────────────────────────
+
+    if (data.parent) {
+      try {
+        // Resolve pageType from root
+        const rootPageType = await resolveRootPageType({
+          id: data.parent,
+          req,
+          collectionSlug,
+        })
+
+        data.pageType = rootPageType
+      } catch (err) {
+        throw new Error(
+          `Cannot save child page: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // BLOCK VALIDATION (runs for root AND child)
+    // ─────────────────────────────────────────────────────────────
+
+    if (data.layout && Array.isArray(data.layout)) {
+      const invalidBlocks = data.layout.filter((block) => {
+        const blockType = block.blockType
+
+        // Find restriction for this block
+        // Note: restrictions auto-extracted from block configs by enhanceCollection
+        const restriction = config.restrictions?.find((r) => r.block === blockType)
+
+        // No restriction = allowed everywhere
+        if (!restriction) return false
+
+        // Has restriction: check if current pageType is allowed
+        return !restriction.allowedPageTypes.includes(data.pageType)
+      })
+
+      /*
+      Restrictions are automatically extracted from block component configs.
+      When a block declares allowedPageTypes, it's converted to a restriction.
+      No manual restrictions array needed in plugin config.
+      */
+
+      if (invalidBlocks.length > 0) {
+        const pageTypeLabel = pageTypes.find((t) => t.slug === data.pageType)?.label
+        const blockNames = invalidBlocks.map((b) => b.blockType).join(', ')
+
+        throw new Error(
+          `The following blocks are not allowed on ${pageTypeLabel} pages: ${blockNames}. ` +
+            `Please remove or replace them before saving.`,
+        )
+      }
+    }
+  }
+}
+
+export const createBeforeDeleteHook = (config: PluginConfig): BeforeDeleteHook => {
+  return async ({ doc, req }) => {
+    const { collectionSlug, pageTypes } = config
+
+    // Only check root pages
+    if (doc.parent) {
+      return
+    }
+
+    // Rule 1: Cannot delete root if it has children
+    const children = await req.payload.find({
+      collection: collectionSlug,
+      where: {
+        parent: { equals: doc.id },
+      },
+      limit: 1,
+    })
+
+    if (children.totalDocs > 0) {
+      throw new Error(
+        `Cannot delete this page because it has ${children.totalDocs} child page(s). ` +
+          `Move or delete child pages first.`,
+      )
+    }
+
+    // Rule 2: Cannot delete required roots
+    const pageTypeCfg = pageTypes.find((t) => t.slug === doc.pageType)
+
+    if (pageTypeCfg?.required) {
+      throw new Error(
+        `Cannot delete the "${pageTypeCfg.label}" root page. ` +
+          `This page type is required by your site structure.`,
+      )
+    }
+  }
+}
+```
+
+### Test cases for hooks
+
+Create `src/__tests__/hooks.test.ts`:
+
+```ts
+import { createBeforeValidateHook, createBeforeDeleteHook } from '../hooks'
+import { PluginConfig } from '../types'
+
+const mockConfig: PluginConfig = {
+  collectionSlug: 'pages',
+  pageTypes: [
+    { slug: 'services', label: 'Services', required: true },
+    { slug: 'legal', label: 'Legal', required: false },
+  ],
+  restrictions: [{ block: 'hero', allowedPageTypes: ['services'] }],
+  enforceRootSlug: true,
+}
+
+describe('beforeValidate hook', () => {
+  let hook: any
+  let mockReq: any
+
+  beforeEach(() => {
+    hook = createBeforeValidateHook(mockConfig)
+    mockReq = {
+      payload: {
+        find: jest.fn(),
+        findByID: jest.fn(),
+      },
+    }
+  })
+
+  test('throws if root has no pageType', async () => {
+    await expect(
+      hook({
+        data: { parent: null, pageType: '' },
+        req: mockReq,
+      }),
+    ).rejects.toThrow(/must define a pageType/)
+  })
+
+  test('throws if pageType not in config', async () => {
+    await expect(
+      hook({
+        data: { parent: null, pageType: 'invalid' },
+        req: mockReq,
+      }),
+    ).rejects.toThrow(/Invalid pageType/)
+  })
+
+  test('allows child without pageType (computed from root)', async () => {
+    mockReq.payload.findByID.mockResolvedValueOnce({
+      id: 'root-1',
+      parent: null,
+      pageType: 'services',
+    })
+
+    const data = { parent: 'root-1', pageType: null, layout: [] }
+
+    await hook({
+      data,
+      req: mockReq,
+    })
+
+    expect(data.pageType).toBe('services')
+  })
+
+  test('validates blocks against pageType', async () => {
+    await expect(
+      hook({
+        data: {
+          parent: null,
+          pageType: 'legal',
+          layout: [{ blockType: 'hero' }],
+        },
+        req: mockReq,
+      }),
+    ).rejects.toThrow(/not allowed on/)
+  })
+
+  test('allows blocks not in restrictions', async () => {
+    const data = {
+      parent: null,
+      pageType: 'services',
+      layout: [
+        { blockType: 'hero' },
+        { blockType: 'custom-block' }, // Not restricted
+      ],
+    }
+
+    await hook({ data, req: mockReq })
+    // Should not throw
+  })
+})
+
+describe('beforeDelete hook', () => {
+  let hook: any
+  let mockReq: any
+
+  beforeEach(() => {
+    hook = createBeforeDeleteHook(mockConfig)
+    mockReq = {
+      payload: {
+        find: jest.fn(),
+      },
+    }
+  })
+
+  test('throws if deleting required root', async () => {
+    mockReq.payload.find.mockResolvedValue({ totalDocs: 0 })
+
+    await expect(
+      hook({
+        doc: { id: 'root-1', parent: null, pageType: 'services' },
+        req: mockReq,
+      }),
+    ).rejects.toThrow(/Cannot delete.*required/)
+  })
+
+  test('throws if root has children', async () => {
+    mockReq.payload.find.mockResolvedValue({ totalDocs: 5 })
+
+    await expect(
+      hook({
+        doc: { id: 'root-1', parent: null, pageType: 'legal' },
+        req: mockReq,
+      }),
+    ).rejects.toThrow(/has.*child/)
+  })
+
+  test('allows delete of non-required root with no children', async () => {
+    mockReq.payload.find.mockResolvedValue({ totalDocs: 0 })
+
+    await expect(
+      hook({
+        doc: { id: 'root-1', parent: null, pageType: 'legal' },
+        req: mockReq,
+      }),
+    ).resolves.not.toThrow()
+  })
+})
+```
+
+---
+
+## Step 1.3 — Manual Integration Tests
+
+Don't run automated tests yet. Test in the dev app manually.
+
+### Start dev environment:
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000/admin`
+
+### Test Case 1: Create root page
+
+1. Go to Pages collection
+2. Create new page:
+   - Title: "Services Root"
+   - Slug: "services"
+   - Parent: (empty)
+   - Page Type: "Services"
+3. Save
+4. ✅ Should succeed
+
+### Test Case 2: Create child page
+
+1. Create new page:
+   - Title: "Service Details"
+   - Slug: "service-details"
+   - Parent: "Services Root"
+   - Page Type: (empty/hidden)
+2. Save
+3. ✅ Should succeed, pageType should be inherited
+
+### Test Case 3: Invalid block on root
+
+1. Edit "Services Root" page
+2. Add "Testimonials" block (restricted to services)
+3. Save
+4. ✅ Should succeed (testimonials allowed on services)
+
+### Test Case 4: Invalid block on legal page
+
+1. Create root: "Legal Root" with pageType "Legal"
+2. Try to add "Hero" block (restricted to services)
+3. Save
+4. ❌ Should fail with clear error
+
+### Test Case 5: Prevent duplicate roots
+
+1. Create another root with pageType "Services"
+2. Save
+3. ❌ Should fail: "Root page already exists for Services"
+
+### Test Case 6: Reparenting
+
+1. Create: A (root), B (child of A), C (child of B)
+2. Open C, change parent to A
+3. Save
+4. ✅ Should succeed, C now inherits from A directly
+
+### Test Case 7: Delete protection
+
+1. Try to delete "Services Root"
+2. ❌ Should fail: "Cannot delete required root"
+3. Delete "Legal Root" (not required)
+4. ✅ Should succeed
+
+---
+
+## Step 1.4 — Debugging Tips
+
+### Check logs
+
+If validation fails unexpectedly:
+
+```bash
+tail -f dev/dev.log | grep pageType
+```
+
+### Add console.log
+
+In `hooks.ts`:
+
+```ts
+console.log('beforeValidate data:', {
+  parent: data.parent,
+  pageType: data.pageType,
+  layout: data.layout?.map((b) => b.blockType),
+})
+```
+
+### Test resolveRootPageType directly
+
+In dev app, create helper endpoint:
+
+```ts
+api.post('/debug/resolve-root', async (req, res) => {
+  const { pageId } = req.body
+  try {
+    const type = await resolveRootPageType({
+      id: pageId,
+      req: req.payload,
+      collectionSlug: 'pages',
+    })
+    res.json({ type })
+  } catch (err) {
+    res.status(400).json({ error: err.message })
+  }
+})
+```
+
+---
+
+## Checklist
+
+- [x] `resolveRootPageType.ts` implemented
+- [x] `beforeValidate` hook implemented
+- [x] `beforeDelete` hook implemented
+- [x] Unit tests written and passing
+- [x] Root creation works in dev app
+- [x] Child pages inherit pageType
+- [x] Block restrictions enforce correctly
+- [x] Duplicate root prevention works
+- [x] Delete protection works
+- [x] Deep nesting (3+ levels) works
+- [x] All error messages are clear
+
+---
+
+## Troubleshooting
+
+**"Cannot find module 'resolveRootPageType'"**
+→ Make sure export is at the top of `src/resolveRootPageType.ts`
+
+**"pageType not assigned to child"**
+→ Check that `beforeValidate` hook is wired correctly in Phase 2
+
+**"Circular parent error on valid hierarchy"**
+→ Check that you're not creating accidental parent cycles (A→B→A)
+
+---
+
+## Next
+
+→ Phase 2: Collection Enhancement (wire hooks, add field)
+
+
+--- FILE: dev-docs/Phase2_CollectionEnhancement.md ---
+# Phase 2 — Collection Enhancement
+
+**Goal:** Wire validation hooks into Pages collection and add pageType field
+
+**Status:** Phase 1 core logic must be working before starting Phase 2
+
+---
+
+## Overview
+
+Phase 2 enhances the Pages collection by:
+
+1. Adding the `pageType` field
+2. Injecting validation hooks
+3. Creating plugin entry point
+4. Testing integration
+
+After this phase, the plugin works end-to-end (blocks field override comes later).
+
+---
+
+## Step 2.1 — Implement `enhanceCollection.ts`
+
+This function modifies the Pages collection to inject plugin logic.
+
+### Create file: `src/enhanceCollection.ts`
+
+```ts
+import { CollectionConfig } from 'payload'
+import { createBeforeValidateHook, createBeforeDeleteHook } from './hooks'
+import { PluginConfig } from './types'
+
+export function enhanceCollection(
+  collection: CollectionConfig,
+  config: PluginConfig,
+): CollectionConfig {
+  const { pageTypes, enforceRootSlug } = config
+
+  // ─────────────────────────────────────────────────────────────
+  // 1. ADD pageType FIELD
+  // ─────────────────────────────────────────────────────────────
+
+  const pageTypeField = {
+    name: 'pageType',
+    type: 'select',
+    label: 'Page Type',
+    options: pageTypes.map((pt) => ({
+      label: pt.label,
+      value: pt.slug,
+    })),
+    required: false,
+    admin: {
+      // Only show for root pages (no parent)
+      condition: (_, siblingData) => {
+        return siblingData?.parent == null
+      },
+      description: 'Choose the page type (root pages only). Child pages inherit from their root.',
+    },
+  }
+
+  // Insert after 'slug' field for good UX
+  const existingFields = collection.fields || []
+  const slugFieldIndex = existingFields.findIndex(
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'slug',
+  )
+
+  let newFields = [...existingFields]
+  if (slugFieldIndex !== -1) {
+    newFields.splice(slugFieldIndex + 1, 0, pageTypeField)
+  } else {
+    newFields.push(pageTypeField)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 2. INJECT HOOKS
+  // ─────────────────────────────────────────────────────────────
+
+  const beforeValidateHook = createBeforeValidateHook(config)
+  const beforeDeleteHook = createBeforeDeleteHook(config)
+
+  const existingBeforeValidate = collection.hooks?.beforeValidate || []
+  const existingBeforeDelete = collection.hooks?.beforeDelete || []
+
+  // Ensure beforeValidate is an array
+  const beforeValidateArray = Array.isArray(existingBeforeValidate)
+    ? existingBeforeValidate
+    : [existingBeforeValidate]
+
+  const beforeDeleteArray = Array.isArray(existingBeforeDelete)
+    ? existingBeforeDelete
+    : [existingBeforeDelete]
+
+  // ─────────────────────────────────────────────────────────────
+  // 3. RETURN ENHANCED COLLECTION
+  // ─────────────────────────────────────────────────────────────
+
+  return {
+    ...collection,
+    fields: newFields,
+    hooks: {
+      ...collection.hooks,
+      beforeValidate: [...beforeValidateArray, beforeValidateHook],
+      beforeDelete: [...beforeDeleteArray, beforeDeleteHook],
+    },
+  }
+}
+```
+
+### Why this approach?
+
+- **Field insertion**: Adds `pageType` after slug for logical UI flow
+- **Conditional field**: Hidden for child pages, shown for roots
+- **Safe hook wiring**: Preserves existing hooks and adds new ones
+- **Non-destructive**: Doesn't modify the original collection config
+
+---
+
+## Step 2.2 — Create Plugin Entry Point
+
+This is the main export that users import and use.
+
+### Update `src/index.ts`:
+
+```ts
+import { Config } from 'payload'
+import { enhanceCollection } from './enhanceCollection'
+import { PluginConfig, PluginOptions } from './types'
+
+function extractBlockRestrictions(collection: CollectionConfig): BlockRestriction[] {
+  const layoutField = collection.fields?.find(
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'layout',
+  )
+
+  if (!layoutField?.blocks) return []
+
+  return layoutField.blocks
+    .filter((block: any) => block.allowedPageTypes)
+    .map((block: any) => ({
+      block: block.slug,
+      allowedPageTypes: block.allowedPageTypes,
+    }))
+}
+
+export const pageTypesPlugin =
+  (pluginConfig: PluginConfig) =>
+  (config: Config): Config => {
+    // Validate config before processing
+    validatePluginConfig(pluginConfig)
+
+    return {
+      ...config,
+      collections: (config.collections || []).map((collection) => {
+        // Only enhance the target collection
+        if (collection.slug === pluginConfig.collectionSlug) {
+          // Auto-extract restrictions from blocks
+          const blockRestrictions = extractBlockRestrictions(collection)
+
+          // Merge with any manually defined restrictions (manual takes precedence)
+          const mergedConfig = {
+            ...pluginConfig,
+            restrictions: [...blockRestrictions, ...(pluginConfig.restrictions || [])],
+          }
+
+          return enhanceCollection(collection, mergedConfig)
+        }
+        return collection
+      }),
+    }
+  }
+
+/**
+ * Validate plugin configuration at startup
+ */
+function validatePluginConfig(config: PluginConfig): void {
+  if (!config.collectionSlug) {
+    throw new Error('pageTypesPlugin: collectionSlug is required')
+  }
+
+  if (!Array.isArray(config.pageTypes) || config.pageTypes.length === 0) {
+    throw new Error('pageTypesPlugin: pageTypes array must not be empty')
+  }
+
+  // Check for duplicate pageType slugs
+  const slugs = config.pageTypes.map((pt) => pt.slug)
+  const duplicates = slugs.filter((slug, idx) => slugs.indexOf(slug) !== idx)
+
+  if (duplicates.length > 0) {
+    throw new Error(`pageTypesPlugin: Duplicate pageType slugs found: ${duplicates.join(', ')}`)
+  }
+
+  // Check for invalid restrictions
+  const validSlugs = new Set(slugs)
+  const validBlockNames = new Set()
+
+  if (Array.isArray(config.restrictions)) {
+    config.restrictions.forEach((restriction) => {
+      restriction.allowedPageTypes.forEach((slug) => {
+        if (!validSlugs.has(slug)) {
+          throw new Error(
+            `pageTypesPlugin: Restriction references invalid pageType "${slug}". ` +
+              `Valid types: ${Array.from(validSlugs).join(', ')}`,
+          )
+        }
+      })
+    })
+  }
+}
+
+// Re-export types for convenience
+export type { PluginConfig, PluginOptions } from './types'
+export { resolveRootPageType } from './resolveRootPageType'
+```
+
+---
+
+## Step 2.3 — Wire into Dev App
+
+Now test the plugin end-to-end by wiring it into the dev Payload config.
+
+### Update `dev/payload.config.ts`:
+
+```ts
+import path from 'path'
+import { buildConfig } from 'payload'
+import { sqliteAdapter } from '@payloadcms/db-sqlite'
+import { slateEditor } from '@payloadcms/richtext-slate'
+import { pageTypesPlugin } from '../src'
+import { Pages } from './collections/Pages'
+
+export default buildConfig({
+  admin: {
+    user: 'users',
+    importMap: {
+      baseDir: path.resolve(__dirname),
+    },
+  },
+  editor: slateEditor({}),
+  collections: [Pages],
+  db: sqliteAdapter({
+    filename: process.env.SQLITE_DB || './dev/payload.db',
+  }),
+  secret: process.env.PAYLOAD_SECRET || 'dev-secret-key',
+  plugins: [
+    pageTypesPlugin({
+      collectionSlug: 'pages',
+      pageTypes: [
+        { slug: 'services', label: 'Services', required: true },
+        { slug: 'legal', label: 'Legal', required: false },
+        { slug: 'blog', label: 'Blog', required: false },
+      ],
+      enforceRootSlug: true,
+      // Note: restrictions auto-extracted from block configs
+    }),
+  ],
+})
+```
+
+---
+
+## Step 2.4 — Test in Dev App
+
+Start the dev environment:
+
+```bash
+npm run dev
+```
+
+### Test Flow A: Root page creation
+
+1. Go to Pages collection
+2. **Create → Services Root**
+   - Title: "Services"
+   - Slug: "services"
+   - Parent: (empty)
+   - Page Type: **"Services"** (should be visible)
+3. Save
+4. ✅ Should succeed
+
+**Verify:**
+
+- pageType field is visible (parent is empty)
+- No validation errors
+- Slug matches pageType
+
+### Test Flow B: Duplicate root prevention
+
+1. Try to create another root with pageType "Services"
+2. Save
+3. ❌ Should fail: "Root page already exists for Services"
+
+### Test Flow C: Child page creation
+
+1. **Create → Service Detail**
+   - Title: "Service Detail"
+   - Slug: "service-detail"
+   - Parent: "Services Root"
+   - Page Type: (should be hidden/disabled)
+2. Open form
+3. ✅ pageType field should be hidden (parent is set)
+4. Save
+5. ✅ Should succeed
+6. Re-open page
+7. ✅ pageType should be "Services" (inherited)
+
+### Test Flow D: Block validation on root
+
+1. Open "Services Root"
+2. Add blocks:
+   - Hero block ✅ (allowed on services)
+   - Testimonials block ✅ (allowed on services)
+3. Save
+4. ✅ Should succeed
+
+### Test Flow E: Block validation on different type
+
+1. Create "Legal Root" with pageType "Legal"
+2. Try to add Hero block (restricted to services)
+3. Save
+4. ❌ Should fail: "not allowed on Legal pages"
+
+### Test Flow F: Reparenting
+
+1. Create chain: Root A → B → C
+2. Open C, change parent to Root A (C now directly under A)
+3. Save
+4. ✅ Should succeed
+5. Re-open C
+6. ✅ pageType should still be "Services"
+
+### Test Flow G: Delete protection
+
+1. Try to delete "Services Root"
+2. ❌ Should fail: "Cannot delete required root"
+3. Create "Contact Root" (not required)
+4. Try to delete it
+5. ❌ Should fail: "has children" (if it has any)
+6. Delete its children first
+7. ✅ Now delete should succeed
+
+---
+
+## Step 2.5 — Inspect Database
+
+Check that pageType is being saved correctly:
+
+```bash
+# Connect to SQLite
+sqlite3 payload.db
+
+# Check services root
+SELECT * FROM pages WHERE slug = 'services';
+
+# Check child
+SELECT * FROM pages WHERE slug = 'service-detail';
+```
+
+---
+
+## Step 2.6 — Error Handling Check
+
+Trigger various error cases and verify messages are clear:
+
+### Missing pageType on root
+
+1. Create root without pageType
+2. Try to save
+3. ❌ Error: "Root pages must define a pageType..."
+
+### Invalid block
+
+1. Create page with restricted block
+2. Try to save
+3. ❌ Error: "not allowed on X pages..."
+
+### Broken parent chain
+
+1. Manually break the parent relationship in DB (delete parent page)
+2. Try to edit child
+3. ❌ Error: "Parent page not found..."
+
+---
+
+## Step 2.7 — Build and Verify Types
+
+```bash
+npm run build
+```
+
+Should produce:
+
+```
+dist/
+├── index.js
+├── index.d.ts
+├── enhanceCollection.js
+├── hooks.js
+├── resolveRootPageType.js
+└── types.d.ts
+```
+
+Verify types are correct:
+
+```bash
+cat dist/index.d.ts | head -30
+```
+
+Should show:
+
+```ts
+export const pageTypesPlugin: (pluginConfig: PluginConfig) => (config: Config) => Config
+export type { PluginConfig, PluginOptions }
+```
+
+---
+
+## Troubleshooting
+
+**"pageTypeField is not visible in form"**
+→ Check `admin.condition` logic in `enhanceCollection.ts`
+
+**"Hooks not running"**
+→ Verify hooks are injected in correct order: existing → new
+
+**"Field appears after other fields"**
+→ Adjust `splice` index in `enhanceCollection.ts`
+
+**"pageType not saved to database"**
+→ Check that beforeValidate hook is actually setting `data.pageType`
+
+**"Build fails with type errors"**
+→ Ensure all types are properly imported and exported
+
+---
+
+## Checklist
+
+- [x] `enhanceCollection.ts` created
+- [x] Plugin entry point (`index.ts`) implemented
+- [x] Config validation added
+- [x] Dev app starts without errors
+- [x] pageType field visible on root pages
+- [x] pageType field hidden on child pages (implemented as read-only inheritance)
+- [x] Validation hooks fire correctly
+- [x] Root creation works
+- [x] Child creation works
+- [x] pageType inherited correctly
+- [x] Block validation works
+- [x] Duplicate root prevention works
+- [x] Delete protection works
+- [x] All error messages are clear
+- [x] Build completes without errors
+- [x] Types are exported correctly
+
+---
+
+## Phase 2 Complete! 🎉
+
+The core plugin now works end-to-end:
+
+✅ Pages have types
+✅ Hierarchy is enforced
+✅ Blocks are validated
+✅ Database stores everything correctly
+
+**What's next:**
+
+- Phase 3: Blocks field override (risky)
+- Phase 4: Admin widget
+- Phase 5: Nested docs integration
+
+---
+
+## Next
+
+→ Phase 3: Blocks System (block filtering UI)
+
+
+--- FILE: dev-docs/Phase3_BlocksSystem.md ---
+# Phase 3 — Blocks System (Native Filtering)
+
+**Goal:** Implement block-level restrictions and automatic UI filtering using Payload's native `filterOptions`
+
+**Status:** Phase 1-2 must be complete. Phase 3 is optional but recommended for better UX.
+
+---
+
+## Architecture: Block-Level Declarations
+
+This phase uses **Payload's native `filterOptions` API** on the blocks field. Blocks declare their own page type restrictions, and the plugin automatically enforces them.
+
+### Data Flow
+
+```
+1. Define blocks with allowedPageTypes
+   ↓
+2. Plugin boots, extracts allowedPageTypes from blocks
+   ↓
+3. Plugin creates filterOptions function
+   ↓
+4. Payload uses filterOptions to dynamically filter blocks in admin UI
+   ↓
+5. User can only add blocks allowed for current pageType
+   ↓
+6. beforeValidate hook validates on save (server authoritative)
+```
+
+---
+
+## Why This Works (Stability)
+
+**Uses only Payload's official, documented APIs:**
+
+- ✅ Block `allowedPageTypes` property (custom, your plugin extends blocks)
+- ✅ Blocks field `filterOptions` (officially documented in Payload v3)
+- ✅ `beforeValidate` hooks (official Payload lifecycle)
+- ✅ No internal component injection
+- ✅ No form state interception
+- ✅ No custom React components
+
+Payload's filterOptions on blocks field allows you to provide a function that returns which block slugs should be available based on context. It's re-evaluated as part of the form state request whenever document data changes. If a block is present but no longer allowed, a validation error occurs when saving.
+
+This is **core Payload functionality**, not an internal API.
+
+---
+
+## Step 3.1 — Declare Restrictions in Block Configs
+
+Blocks declare which page types they're allowed on.
+
+### Example: Hero Block
+
+```ts
+// src/blocks/Hero.ts
+import { Block } from 'payload'
+
+export const HeroBlock: Block = {
+  slug: 'hero',
+  label: 'Hero',
+
+  // NEW: Declare which page types this block is allowed on
+  allowedPageTypes: ['services'],
+
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'subtitle',
+      type: 'text',
+    },
+    {
+      name: 'image',
+      type: 'upload',
+      relationTo: 'media',
+      required: true,
+    },
+  ],
+}
+```
+
+### Example: Testimonials Block
+
+```ts
+// src/blocks/Testimonials.ts
+export const TestimonialsBlock: Block = {
+  slug: 'testimonials',
+  label: 'Testimonials',
+
+  // Allowed on multiple types
+  allowedPageTypes: ['services', 'blog'],
+
+  fields: [
+    {
+      name: 'testimonials',
+      type: 'array',
+      fields: [
+        { name: 'quote', type: 'text' },
+        { name: 'author', type: 'text' },
+      ],
+    },
+  ],
+}
+```
+
+### Example: Legal Notice Block
+
+```ts
+// src/blocks/LegalNotice.ts
+export const LegalNoticeBlock: Block = {
+  slug: 'legal-notice',
+  label: 'Legal Notice',
+
+  // Only on legal pages
+  allowedPageTypes: ['legal'],
+
+  fields: [
+    {
+      name: 'notice',
+      type: 'richtext',
+    },
+  ],
+}
+```
+
+### Example: Global Block (No Restriction)
+
+```ts
+// src/blocks/Spacer.ts
+export const SpacerBlock: Block = {
+  slug: 'spacer',
+  label: 'Spacer',
+
+  // No allowedPageTypes = allowed everywhere
+  // (Omit the property entirely)
+
+  fields: [
+    {
+      name: 'height',
+      type: 'number',
+    },
+  ],
+}
+```
+
+---
+
+## Step 3.2 — Update Pages Collection (Single Layout Field)
+
+The Pages collection has **one** `layout` field with **all** blocks.
+
+```ts
+// dev/collections/Pages.ts
+import { CollectionConfig } from 'payload'
+import { HeroBlock } from '../blocks/Hero'
+import { TestimonialsBlock } from '../blocks/Testimonials'
+import { LegalNoticeBlock } from '../blocks/LegalNotice'
+import { SpacerBlock } from '../blocks/Spacer'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+    },
+    // pageType field added by plugin
+    // parent field added by nested docs plugin
+
+    // SINGLE layout field with ALL blocks
+    {
+      name: 'layout',
+      type: 'blocks',
+      blocks: [
+        HeroBlock,
+        TestimonialsBlock,
+        LegalNoticeBlock,
+        SpacerBlock,
+        // Add more blocks here...
+      ],
+      // filterOptions will be added by plugin
+    },
+  ],
+}
+```
+
+---
+
+## Step 3.3 — Plugin Extracts and Injects filterOptions
+
+The plugin reads `allowedPageTypes` from blocks and sets up `filterOptions`.
+
+### Update `src/enhanceCollection.ts`
+
+```ts
+import { CollectionConfig } from 'payload'
+import { PluginConfig } from './types'
+
+export function enhanceCollection(
+  collection: CollectionConfig,
+  config: PluginConfig,
+): CollectionConfig {
+  const fields = collection.fields || []
+
+  // ... existing pageType field and hook injection ...
+
+  // NEW: Inject filterOptions into blocks field
+  const layoutFieldIndex = fields.findIndex(
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'layout',
+  )
+
+  if (layoutFieldIndex !== -1) {
+    const layoutField = fields[layoutFieldIndex] as any
+
+    // Extract allowed blocks from their config
+    const blockRestrictionsMap = new Map<string, string[]>()
+
+    layoutField.blocks?.forEach((block: any) => {
+      if (block.allowedPageTypes) {
+        blockRestrictionsMap.set(block.slug, block.allowedPageTypes)
+      }
+    })
+
+    // Set filterOptions on the blocks field
+    layoutField.filterOptions = ({ siblingData }: any) => {
+      const pageType = siblingData?.pageType
+
+      // If no pageType selected (root without type), show all blocks
+      if (!pageType) {
+        return true
+      }
+
+      // Filter blocks: return only slugs allowed for this pageType
+      const allowedBlockSlugs: string[] = []
+
+      layoutField.blocks?.forEach((block: any) => {
+        const allowedTypes = blockRestrictionsMap.get(block.slug)
+
+        // No restriction = allowed everywhere
+        if (!allowedTypes) {
+          allowedBlockSlugs.push(block.slug)
+        }
+        // Has restriction: check if current pageType is in allowed list
+        else if (allowedTypes.includes(pageType)) {
+          allowedBlockSlugs.push(block.slug)
+        }
+      })
+
+      return allowedBlockSlugs
+    }
+
+    // Also extract restrictions for server-side validation
+    const restrictions = Array.from(blockRestrictionsMap.entries()).map(
+      ([block, allowedPageTypes]) => ({
+        block,
+        allowedPageTypes,
+      }),
+    )
+
+    // Update config to include extracted restrictions
+    const enhancedConfig = {
+      ...config,
+      restrictions,
+    }
+
+    // Use enhancedConfig for hooks (already done in earlier phases)
+  }
+
+  return {
+    ...collection,
+    fields,
+    hooks: {
+      // ... existing hooks ...
+    },
+  }
+}
+```
+
+---
+
+## Step 3.4 — Server-Side Validation (Unchanged)
+
+The `beforeValidate` hook still validates on save (already from Phase 1):
+
+```ts
+// In beforeValidate hook (from Phase 1)
+if (data.layout && Array.isArray(data.layout)) {
+  const invalidBlocks = data.layout.filter((block) => {
+    const restriction = config.restrictions?.find((r) => r.block === block.blockType)
+    if (!restriction) return false // No restriction = allowed
+    return !restriction.allowedPageTypes.includes(data.pageType)
+  })
+
+  if (invalidBlocks.length > 0) {
+    throw new Error(
+      `Invalid blocks for "${data.pageType}": ${invalidBlocks.map((b) => b.blockType).join(', ')}`,
+    )
+  }
+}
+```
+
+This runs on every save. Even if UI filtering failed, server validation prevents invalid data.
+
+---
+
+## Step 3.5 — Test in Dev App
+
+```bash
+npm run dev
+```
+
+### Test Flow 1: Block Filtering Works
+
+1. Create page with `pageType: "services"`
+2. Go to layout field
+3. **Only HeroBlock, TestimonialsBlock, SpacerBlock appear** (LegalNoticeBlock is hidden)
+4. Try to add Hero block ✅ It's in the list
+5. Change pageType to "legal"
+6. **Layout field updates:** Now only LegalNoticeBlock and SpacerBlock appear
+7. Try to add Hero block ❌ It's no longer in the list
+
+### Test Flow 2: Server Validation (Fallback)
+
+1. (Advanced) Somehow bypass UI and add forbidden block directly
+2. Click save
+3. ❌ Server validation rejects: "Hero not allowed on legal pages"
+
+### Test Flow 3: Unrestricted Blocks
+
+1. Create any page type
+2. SpacerBlock appears everywhere (no restriction)
+3. ✅ Can add to any page type
+
+---
+
+## How It Works: Technical Breakdown
+
+### Boot Time (Plugin Init)
+
+```ts
+// Plugin sees this:
+HeroBlock = {
+  slug: 'hero',
+  allowedPageTypes: ['services'],
+  fields: [...]
+}
+
+// Plugin extracts to restrictions:
+restrictions = [
+  { block: 'hero', allowedPageTypes: ['services'] }
+]
+
+// Plugin sets filterOptions:
+filterOptions = ({ siblingData }) => {
+  if (siblingData.pageType === 'services') {
+    return ['hero', 'testimonials', 'spacer']  // Hero allowed
+  }
+  if (siblingData.pageType === 'legal') {
+    return ['legal-notice', 'spacer']  // Hero NOT allowed
+  }
+}
+```
+
+### Admin UI (Form Load)
+
+```
+1. User views page form with pageType = "services"
+2. Payload calls: filterOptions({ siblingData: { pageType: 'services' } })
+3. Gets: ['hero', 'testimonials', 'spacer']
+4. Displays only these blocks in "Add Block" button
+5. User changes pageType to "legal"
+6. Payload re-calls filterOptions
+7. Gets: ['legal-notice', 'spacer']
+8. UI updates, Hero and Testimonials now hidden
+```
+
+### Save Time (Server Validation)
+
+```
+1. User tries to save with invalid blocks
+2. beforeValidate hook runs
+3. Checks: block 'hero' in restrictions?
+   - Yes. Is 'legal' in allowedPageTypes?
+   - No. Invalid.
+4. Throws error: "Hero not allowed on legal pages"
+5. Save fails, user sees error
+```
+
+---
+
+## Frontend: Just Use `page.layout`
+
+No merge logic needed. Single `layout` field:
+
+```ts
+// Fetch page
+const page = await fetch(`/api/pages/${pageId}`)
+
+// Use layout directly
+page.layout.forEach((block) => renderBlock(block))
+```
+
+Compare to per-type fields approach (would be):
+
+```ts
+// Would need to merge multiple fields:
+const layout = [
+  ...(page.layout_services || []),
+  ...(page.layout_legal || []),
+  ...(page.layout_blog || []),
+]
+```
+
+**Much simpler with single layout field.**
+
+---
+
+## Why Block-Level Declarations Are Better
+
+| Aspect               | Per-Type Fields                | Block-Level Declarations |
+| -------------------- | ------------------------------ | ------------------------ |
+| Single layout field? | ❌ Multiple fields             | ✅ Yes                   |
+| Add new page type    | ❌ Add new field to schema     | ✅ Just use in config    |
+| Scale to 10 types    | ⚠️ 10 separate fields          | ✅ Still one field       |
+| Block declares needs | ❌ Implicit in field lists     | ✅ Explicit in block     |
+| Unique block names?  | ❌ Required (naming conflicts) | ✅ Not required          |
+| Frontend complexity  | ⚠️ Merge logic                 | ✅ Direct `page.layout`  |
+| DRY principle        | ❌ Restrictions duplicated     | ✅ Single source         |
+| Payload API used     | Condition (stable)             | filterOptions (stable)   |
+
+---
+
+## Payload API Stability
+
+Both approaches use **only stable, documented Payload APIs:**
+
+- ✅ Block config properties (you can extend blocks)
+- ✅ `filterOptions` on blocks field (official Payload v3 feature)
+- ✅ `beforeValidate` hooks (core Payload lifecycle)
+- ✅ Server validation via hooks (standard pattern)
+
+**No internal APIs. No custom components. No form state hacking.**
+
+---
+
+## Error Messages
+
+When user tries to save with invalid blocks:
+
+```
+Error: Invalid blocks for "Legal": hero, testimonials
+
+Allowed blocks for Legal pages: legal-notice, spacer
+
+Please remove the highlighted blocks and try again.
+```
+
+Clear, actionable, specific.
+
+---
+
+## Implementation Checklist
+
+- [x] Blocks declare `allowedPageTypes` in their config
+- [x] All blocks defined with appropriate restrictions
+- [x] Pages collection has single `layout` field with all blocks
+- [x] Plugin extracts `allowedPageTypes` from blocks at boot
+- [x] Plugin sets `filterOptions` on blocks field
+- [x] Plugin extracts restrictions for server-side validation
+- [x] Dev app builds without errors
+- [x] Block filtering shows correctly in admin UI
+- [x] Changing pageType updates filtered blocks live
+- [x] Save fails with clear error when user adds restricted block
+- [x] Frontend works with single `page.layout` field (no merge needed)
+
+---
+
+## What This Phase Does NOT Include
+
+❌ Per-type block fields
+❌ Custom React components
+❌ Form state interception
+❌ Payload internal API dependencies
+❌ Fallback modes
+❌ Component injection
+
+Just: **Native Payload `filterOptions` + block declarations.**
+
+---
+
+## Summary
+
+**Architecture:**
+
+1. Blocks declare `allowedPageTypes` (where restriction lives)
+2. Plugin extracts these at boot (single source of truth)
+3. Plugin sets `filterOptions` on blocks field (Payload native)
+4. UI filters dynamically (Payload handles it)
+5. Server validates on save (authoritative, catches edge cases)
+6. Frontend gets single `layout` array (simple to render)
+
+**Benefits:**
+
+- ✅ Stable (only Payload documented APIs)
+- ✅ Scalable (N page types, 1 layout field)
+- ✅ DRY (restriction declared once in block config)
+- ✅ Simple (no custom code, native filtering)
+- ✅ Maintainable (block and restriction together)
+
+---
+
+## Next
+
+→ Phase 4: Admin Widget (health checks + create actions)
+
+
+--- FILE: dev-docs/Phase4_AdminWidget.md ---
+# Phase 4 — Dashboard Widget (Final Implementation Spec)
+
+**Goal:** Implement a production-ready Page Types Health widget using Payload's modular dashboard API with zero-config styling and progressive disclosure.
+
+**Status:** Phase 1–3 required
+
+---
+
+## Core Constraints
+
+* Plugin must be **zero-config** for consumers
+* No Tailwind dependency
+* No global CSS injection
+* Fully self-contained styling
+* Compatible with all Payload admin themes
+
+---
+
+## Styling Decision (Final)
+
+| Option        | Status        | Reason                         |
+| ------------- | ------------- | ------------------------------ |
+| Tailwind      | ❌ Rejected    | Requires consumer build config |
+| shadcn        | ❌ Not default | Depends on Tailwind            |
+| Inline styles | ⚠️ Fallback   | Verbose                        |
+| CSS Modules   | ✅ Selected    | Scoped, clean, zero-config     |
+
+---
+
+## Widget Registration (Correct API)
+
+Use Payload modular dashboard:
+
+```ts
+admin: {
+  dashboard: {
+    widgets: [
+      {
+        slug: 'page-types-health',
+        Component: '@od-labs/payload-pagetypes/src/admin/widgets/PageTypesHealth#default',
+        minWidth: 'small',
+        maxWidth: 'full'
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Step 4.1 — Widget Behavior Design
+
+### Priority System
+
+**Critical (High Priority)**
+
+* PageType defined in config but **root not created**
+
+**Warning (Low Priority)**
+
+* Root exists but **slug mismatch with config**
+
+---
+
+## Step 4.2 — Progressive Disclosure (Widget Sizes)
+
+Payload widgets support 4 sizes. Behavior adapts per size.
+
+### Small
+
+* Title + status badge
+* Issue count only
+* Example: "⚠️ 2 issues"
+* Button: "View Details"
+
+---
+
+### Medium
+
+* Title + badge
+* Show **top 2 issues**
+
+  * Prefer critical
+  * Fallback to warnings
+* Button: "View Details"
+
+---
+
+### Large
+
+* Title + badge
+* Show **all critical issues**
+* Warnings collapsed under "Show more"
+* Button: "View Details"
+
+---
+
+### Full
+
+* Title + badge
+* All critical issues
+* All warnings expanded
+* Stats row
+* Button: "View Details"
+
+---
+
+## Step 4.3 — UI Sections
+
+### 1. Header
+
+* Title: Page Types Health
+* Status badge:
+
+  * ✅ Healthy
+  * ⚠️ Issues
+
+---
+
+### 2. Critical Issues (Always First)
+
+Example:
+
+* ❌ Services — root not created
+* ❌ Blog — root not created
+
+Rules:
+
+* Always visible
+* Sorted by config order
+
+---
+
+### 3. Warnings
+
+Example:
+
+* ⚠️ Services — expected "services", found "services-landing"
+
+Rules:
+
+* Hidden (small/medium)
+* Collapsible (large)
+* Always visible (full)
+
+---
+
+### 4. Healthy State
+
+Displayed when no issues:
+
+* "All page types are correctly configured"
+
+---
+
+### 5. Stats Row (Large/Full only)
+
+* Total Types
+* Roots Found
+* Health %
+
+---
+
+## Step 4.4 — Modal: View Details
+
+### Behavior
+
+* Always available (all sizes)
+* Opens modal overlay
+
+### Content
+
+Shows **ALL page types**
+
+Each row includes:
+
+* Status icon
+* Label
+* Slug
+* Status message
+
+### Status Types
+
+* ✅ Healthy
+* ❌ Missing root
+* ⚠️ Slug mismatch
+
+---
+
+## Step 4.5 — Icons (Lucide)
+
+* Success: CheckCircle2
+* Warning: AlertTriangle
+* Error: XCircle
+* Action: List
+
+---
+
+## Step 4.6 — Component Structure
+
+```tsx
+<PageTypesHealth>
+  <Header />
+  <CriticalList />
+  <WarningList />
+  <Stats />
+  <ViewDetailsButton />
+  <Modal />
+</PageTypesHealth>
+```
+
+---
+
+## Step 4.7 — Data Processing (Server)
+
+Use Payload Local API:
+
+```ts
+const result = await payload.find({
+  collection: collectionSlug,
+  where: { parent: { exists: false } },
+  depth: 0
+})
+```
+
+Processing:
+
+* Group roots by `pageType`
+* Detect missing types
+* Detect slug mismatches
+* Compute health %
+
+---
+
+## Step 4.8 — CSS Modules
+
+### File Structure
+
+```
+src/admin/widgets/
+  PageTypesHealth.tsx
+  PageTypesHealth.module.css
+```
+
+### Rules
+
+* No global selectors
+* No Tailwind
+* No dependency on consumer styles
+
+---
+
+## Step 4.9 — Plugin Integration
+
+```ts
+export interface PluginOptions {
+  enableDashboardWidget?: boolean
+}
+```
+
+Disable support:
+
+```ts
+if (pluginConfig.enableDashboardWidget === false) {
+  return config
+}
+```
+
+---
+
+## Step 4.10 — Expected Behavior
+
+| Scenario      | Output                         |
+| ------------- | ------------------------------ |
+| All valid     | Green badge + success message  |
+| Missing roots | Critical list                  |
+| Slug mismatch | Warning list                   |
+| Mixed         | Critical first, warnings below |
+| Any state     | "View Details" always visible  |
+
+---
+
+## Step 4.11 — UX Rules
+
+* Max 2 issues in medium
+* Never overwhelm small widgets
+* Critical always above warnings
+* Messages must be one-line
+* Avoid technical wording
+
+---
+
+## Step 4.12 — Optional (Future)
+
+* Click row → open filtered Pages view
+* Auto-create missing roots
+* Inline fix actions
+
+---
+
+## Summary
+
+| Area     | Decision                  |
+| -------- | ------------------------- |
+| API      | `admin.dashboard.widgets` |
+| Styling  | CSS Modules               |
+| Tailwind | Not used                  |
+| shadcn   | Optional only             |
+| Layout   | Progressive disclosure    |
+| Modal    | Shows all page types      |
+| Priority | Critical + Warning        |
+
+---
+
+## Result
+
+* Fully Payload-native widget
+* Zero-config installation
+* No CSS conflicts
+* Clean, modern UI
+* Scalable for future enhancements
+
+
+--- FILE: dev-docs/Phase5_NestedDocs.md ---
+# Phase 5 — Nested Docs & Slug Integration
+
+**Goal:** Integrate official Payload CMS features for hierarchy and slug handling
+
+**Status:** Phase 1–4 must be complete before starting Phase 5
+
+---
+
+## Overview
+
+Phase 5 integrates two official Payload features:
+
+1. `@payloadcms/plugin-nested-docs` → hierarchy + parent management
+2. Payload slug system (`slugField` or equivalent) → URL handling
+
+This plugin **does not replace** these systems. It composes on top of them.
+
+---
+
+## Core Principle
+
+| Responsibility     | Owner               |
+| ------------------ | ------------------- |
+| Parent hierarchy   | nested-docs plugin  |
+| Breadcrumbs / URLs | nested-docs plugin  |
+| Slug generation    | Payload slug system |
+| Page type rules    | page-types plugin   |
+| Root enforcement   | page-types plugin   |
+
+---
+
+## Dependencies
+
+### Required peer dependencies
+
+```json
+{
+  "peerDependencies": {
+    "payload": ">=3.0.0",
+    "@payloadcms/plugin-nested-docs": ">=1.0.0"
+  }
+}
+```
+
+### Important
+
+* Plugin must work even if nested-docs is not installed
+* When installed → enhanced behavior
+* When absent → fallback to manual parent handling
+
+---
+
+## Step 5.1 — Install Nested Docs Plugin
+
+```bash
+npm install @payloadcms/plugin-nested-docs
+```
+
+---
+
+## Step 5.2 — Register Plugins (ORDER CRITICAL)
+
+```ts
+plugins: [
+  nestedDocsPlugin({
+    collections: ['pages']
+  }),
+
+  pageTypesPlugin({
+    collectionSlug: 'pages',
+    pageTypes: [
+      { slug: 'services', label: 'Services', required: true },
+      { slug: 'legal', label: 'Legal' }
+    ]
+  })
+]
+```
+
+### Rule
+
+* nested-docs MUST run before page-types
+* page-types depends on `parent` field being available
+
+---
+
+## Step 5.3 — Parent Field Ownership
+
+### With nested-docs
+
+* `parent` field is auto-created
+* Plugin must NOT redefine or override it
+
+### Without nested-docs
+
+* Plugin must NOT inject parent field automatically
+* User is responsible for defining hierarchy
+
+---
+
+## Step 5.4 — Slug System Integration (Flexible Mode)
+
+Payload slug behavior is preserved and extended.
+
+### Default behavior
+
+* Slug generated from title (or configured field)
+* Editable in admin
+
+### Plugin behavior (Root Pages Only)
+
+For root pages (`parent == null`):
+
+```ts
+expectedSlug = pageType.slug
+```
+
+---
+
+## Step 5.5 — Validation Rules (Flexible Mode)
+
+### Root Pages
+
+* Slug SHOULD match pageType slug
+* If mismatch:
+
+  * Allow save
+  * Emit validation warning (non-blocking OR blocking based on config)
+
+Example:
+
+```
+Expected: services
+Actual: services-landing
+→ Allowed, but flagged
+```
+
+### Optional strict mode (future)
+
+```ts
+enforceRootSlug: true
+```
+
+* If enabled → mismatch throws error
+* If disabled → mismatch allowed
+
+---
+
+## Step 5.6 — Hook Implementation
+
+Slug logic must be implemented via hooks.
+
+### Hook placement
+
+* `beforeValidate` or `beforeChange`
+* Must run AFTER slugField logic
+
+### Logic
+
+```ts
+if (!data.parent) {
+  const expected = data.pageType
+
+  if (data.slug !== expected) {
+    // flexible mode → allow but track
+  }
+}
+```
+
+### Important
+
+* NEVER override slug automatically in flexible mode
+* ONLY validate
+
+---
+
+## Step 5.7 — Admin UX Behavior
+
+### Root Pages
+
+* Slug field visible
+* Editable
+* Validation feedback shown if mismatch
+
+### Child Pages
+
+* Normal slug behavior
+* No page-type influence
+
+---
+
+## Step 5.8 — Nested Docs Interaction
+
+### URL Generation
+
+Nested docs may generate URLs like:
+
+```
+/services/web-design
+```
+
+This depends on:
+
+```ts
+generateURL: (docs) => docs.map(d => d.slug).join('/')
+```
+
+### Implication
+
+* Root slug affects entire subtree URLs
+* Slug mismatch can propagate to URLs
+
+---
+
+## Step 5.9 — Reparenting Behavior
+
+When parent changes:
+
+* nested-docs updates breadcrumbs
+* page-types recomputes pageType
+* slug remains unchanged (unless manually edited)
+
+---
+
+## Step 5.10 — Compatibility Rules
+
+Plugin MUST:
+
+* Not override nested-docs fields
+* Not assume breadcrumb structure
+* Not depend on URL format
+* Not modify slugField internals
+* Only use hooks for validation
+
+---
+
+## Step 5.11 — Failure Scenarios
+
+### Missing nested-docs
+
+* parent may not exist
+* plugin must still work (limited hierarchy)
+
+### Slug mismatch
+
+* Allowed in flexible mode
+* Highlighted in dashboard widget (Phase 4)
+
+---
+
+## Step 5.12 — Integration Checklist
+
+* [ ] nested-docs installed (optional)
+* [ ] Plugin order correct
+* [ ] parent field detected
+* [ ] slug field present
+* [ ] root slug validation works
+* [ ] child slug unaffected
+* [ ] no conflicts with nested-docs
+
+---
+
+## Summary
+
+| Area         | Behavior                   |
+| ------------ | -------------------------- |
+| Hierarchy    | Managed by nested-docs     |
+| Slug (root)  | Validated against pageType |
+| Slug (child) | Default Payload behavior   |
+| Enforcement  | Flexible (non-blocking)    |
+| Integration  | Non-invasive               |
+
+---
+
+
+--- FILE: dev-docs/Phase6_Packaging.md ---
+# Phase 6 — Packaging & Publishing
+
+**Goal:** Prepare plugin for npm publishing
+
+**Status:** Phase 0-5 complete, testing done
+
+**Note:** Publishing is optional. You can use as local plugin indefinitely.
+
+---
+
+## Overview
+
+Phase 6 covers:
+
+1. Build optimization
+2. Package metadata
+3. Distribution files
+4. Publishing to npm
+5. Documentation for users
+
+---
+
+## Step 6.1 — Clean Build Output
+
+### Verify build is clean:
+
+```bash
+npm run build
+```
+
+Should produce:
+
+```
+dist/
+├── index.js (minified)
+├── index.d.ts (types)
+├── enhanceCollection.js
+├── enhanceCollection.d.ts
+├── hooks.js
+├── hooks.d.ts
+├── resolveRootPageType.js
+├── resolveRootPageType.d.ts
+├── types.js
+├── types.d.ts
+└── admin/
+    ├── FilteredBlocksField.js
+    ├── FilteredBlocksField.d.ts
+    ├── Widget.js
+    └── Widget.d.ts
+```
+
+### Clean dist before publishing:
+
+```bash
+rm -rf dist/
+npm run build
+```
+
+---
+
+## Step 6.2 — Update `package.json`
+
+### Full package.json for publishing:
+
+```json
+{
+  "name": "@od-labs/payload-pagetypes",
+  "version": "1.0.0",
+  "description": "Payload CMS plugin for enforcing page types and block restrictions",
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/payload-pagetypes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/payload-pagetypes/issues"
+  },
+  "homepage": "https://github.com/yourusername/payload-pagetypes#readme",
+  "keywords": [
+    "payload",
+    "cms",
+    "plugin",
+    "page-types",
+    "hierarchy",
+    "block-restrictions",
+    "content-governance"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./admin": {
+      "types": "./dist/admin/index.d.ts",
+      "import": "./dist/admin/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "payload dev",
+    "test": "jest",
+    "lint": "eslint src",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test && npm run lint"
+  },
+  "peerDependencies": {
+    "payload": ">=3.0.0",
+    "@payloadcms/plugin-nested-docs": ">=1.0.0"
+  },
+  "devDependencies": {
+    "payload": "^3.0.0",
+    "@payloadcms/plugin-nested-docs": "^1.0.0",
+    "@payloadcms/db-sqlite": "^1.0.0",
+    "@payloadcms/richtext-slate": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "eslint": "^8.0.0"
+  }
+}
+```
+
+### Key sections:
+
+- **name**: Scoped to `@od-labs` (your npm org)
+- **exports**: Named exports for subpaths
+- **files**: Only include necessary files (exclude `/dev`, `/src` TypeScript)
+- **peerDependencies**: Payload and nested docs are peer deps (user provides)
+- **prepublishOnly**: Run checks before publishing
+
+---
+
+## Step 6.3 — Create `.npmignore`
+
+File: `.npmignore`
+
+```
+# Development
+dev/
+src/
+.env
+.env.local
+
+# Configuration
+tsconfig.json
+jest.config.js
+.eslintrc.js
+
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Testing
+*.test.ts
+*.spec.ts
+__tests__/
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules/
+.npm
+```
+
+---
+
+## Step 6.4 — Create `.npmrc` (for publishing)
+
+File: `.npmrc`
+
+```
+# Use npm registry
+registry=https://registry.npmjs.org/
+
+# Auto-create git tags on publish
+tag-version-prefix=v
+
+# Set access level (public for scoped packages)
+access=public
+```
+
+---
+
+## Step 6.5 — Update TypeScript Config
+
+### `tsconfig.json` for publishing:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "dev"]
+}
+```
+
+---
+
+## Step 6.6 — Create Comprehensive README.md
+
+Create public-facing README for npm:
+
+File: `README.md` (replace existing)
+
+```markdown
+# @od-labs/payload-pagetypes
+
+A Payload CMS v3 plugin that enforces structured page types, hierarchical consistency, and block-level restrictions.
+
+## Features
+
+- **Page Type System** — Define strict root-level page types with automatic inheritance
+- **Block Restrictions** — Restrict specific blocks to specific page types
+- **Hierarchy Enforcement** — One root per type, prevent circles, protect required roots
+- **Server-Side Validation** — All rules enforced in hooks (source of truth)
+- **Admin Block Filtering** — Reactive UI component (with server-side fallback)
+- **Structure Health Widget** — Detect missing or duplicate roots with quick actions
+
+## Installation
+
+```bash
+npm install @od-labs/payload-pagetypes @payloadcms/plugin-nested-docs
+```
+
+## Quick Start
+
+```ts
+import { buildConfig } from 'payload'
+import { pageTypesPlugin } from '@od-labs/payload-pagetypes'
+
+export default buildConfig({
+  collections: [Pages],
+  plugins: [
+    pageTypesPlugin({
+      collectionSlug: 'pages',
+      pageTypes: [
+        { slug: 'services', label: 'Services', required: true },
+        { slug: 'legal', label: 'Legal', required: false }
+      ],
+      enforceRootSlug: true
+      // Note: restrictions auto-extracted from block configs
+    })
+  ]
+})
+```
+
+## Configuration
+
+### `PluginConfig`
+
+```ts
+type PageType = {
+  slug: string              // Unique identifier
+  label: string             // Admin UI label
+  required?: boolean        // Prevent deletion
+}
+
+type BlockRestriction = {
+  block: string             // Block slug
+  allowedPageTypes: string[] // Allowed page type slugs
+}
+
+type PluginConfig = {
+  collectionSlug: string       // Target collection
+  pageTypes: PageType[]        // All page types
+  restrictions?: BlockRestriction[]
+  enforceRootSlug?: boolean    // Require slug === pageType for roots
+}
+```
+
+## Behavior
+
+### Root Pages
+
+- Must define `pageType`
+- One root per type (no duplicates)
+- Optional: slug must match pageType
+- Cannot be deleted if required or has children
+
+### Child Pages
+
+- `pageType` never user-editable
+- Always inherited from root ancestor
+- Safe across deep nesting
+
+### Block Restrictions
+
+- Blocks in restrictions are type-specific
+- Blocks not in restrictions are allowed everywhere
+- Invalid blocks rejected on save (not hidden)
+
+## API
+
+### `pageTypesPlugin(config: PluginConfig)`
+
+Main plugin export. Returns a Payload plugin function.
+
+```ts
+const plugin = pageTypesPlugin({ /* ... */ })
+export default buildConfig({
+  plugins: [plugin]
+})
+```
+
+### `resolveRootPageType({ id, req, collectionSlug })`
+
+Programmatically resolve a page's type:
+
+```ts
+import { resolveRootPageType } from '@od-labs/payload-pagetypes'
+
+const pageType = await resolveRootPageType({
+  id: pageId,
+  req: payloadRequest,
+  collectionSlug: 'pages'
+})
+```
+
+Throws on circular parents or missing roots.
+
+## Block Filtering
+
+### Option A: Per-Type Blocks Fields (Recommended)
+
+Separate blocks field for each page type using `admin.condition`:
+
+```ts
+// Automatically handled by plugin
+// No additional configuration needed
+```
+
+### Option B: Info Component
+
+Shows allowed blocks as informational text:
+
+```ts
+// Plugin includes fallback info component
+// Shown if field injection fails
+```
+
+### Option C: Manual
+
+Manage blocks field yourself. Plugin enforces restrictions server-side.
+
+## Migration
+
+For existing pages:
+
+1. Deploy plugin
+2. Create root pages for each type via admin
+3. Assign parents to existing pages
+4. Verify hierarchy is valid
+5. Full usage enabled
+
+## Limitations
+
+- Requires Payload v3+
+- Single collection per plugin instance
+- Block filtering is best-effort (server validation authoritative)
+- Uses SQLite (not MongoDB)
+- Block restrictions auto-extracted from block configs
+- No GraphQL block restriction support
+
+## Troubleshooting
+
+**"Root page already exists"**
+→ Only one root per type allowed. Delete duplicate or change pageType.
+
+**"Cannot delete root with children"**
+→ Move or delete child pages first.
+
+**"Circular parent reference"**
+→ Check page hierarchy. A page cannot be its own ancestor.
+
+**"Invalid blocks for pageType"**
+→ Remove restricted blocks or change pageType.
+
+## Examples
+
+### Create hierarchical pages
+
+```ts
+// Root
+{ title: 'Services', slug: 'services', pageType: 'services', parent: null }
+
+// Child
+{ title: 'Web Design', slug: 'web-design', pageType: 'services', parent: 'services-id' }
+
+// Grandchild
+{ title: 'Process', slug: 'process', pageType: 'services', parent: 'web-design-id' }
+```
+
+### Restrict blocks per type
+
+```ts
+restrictions: [
+  { block: 'hero', allowedPageTypes: ['services'] },
+  { block: 'testimonials', allowedPageTypes: ['services'] },
+  { block: 'legal-notice', allowedPageTypes: ['legal'] }
+]
+```
+
+### Require specific roots
+
+```ts
+pageTypes: [
+  { slug: 'services', label: 'Services', required: true },   // Must exist
+  { slug: 'blog', label: 'Blog', required: false }           // Optional
+]
+```
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/payload-pagetypes/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/payload-pagetypes/discussions)
+- **Documentation**: [Full Docs](https://github.com/yourusername/payload-pagetypes/wiki)
+
+## License
+
+MIT
+
+## Changelog
+
+### 1.0.0
+
+- Initial release
+- Root page enforcement
+- Block restrictions
+- Admin widget
+- Full TypeScript support
+```
+
+---
+
+## Step 6.7 — Add License
+
+File: `LICENSE`
+
+```
+MIT License
+
+Copyright (c) 2024 OD Labs
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE OR OTHERWISE OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+## Step 6.8 — Create Admin Subpath Export
+
+Some users may want to import admin components directly.
+
+### Create `src/admin/index.ts`:
+
+```ts
+export { FilteredBlocksField } from './FilteredBlocksField'
+export { PageTypesWidget } from './Widget'
+```
+
+### Update main `src/index.ts` to re-export:
+
+```ts
+export const pageTypesPlugin = /* ... */
+
+// Optional admin exports for advanced users
+export { FilteredBlocksField, PageTypesWidget } from './admin'
+
+export type { PluginConfig, PluginOptions } from './types'
+export { resolveRootPageType } from './resolveRootPageType'
+```
+
+Users can then:
+
+```ts
+import { pageTypesPlugin } from '@od-labs/payload-pagetypes'
+import { PageTypesWidget } from '@od-labs/payload-pagetypes/admin'
+```
+
+---
+
+## Step 6.9 — Setup Git Repository
+
+### Initialize git (if not already):
+
+```bash
+git init
+git remote add origin https://github.com/yourusername/payload-pagetypes.git
+```
+
+### Create `.gitignore`:
+
+```
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vscode/
+.idea/
+coverage/
+```
+
+### Initial commit:
+
+```bash
+git add .
+git commit -m "Initial commit: payload-pagetypes v1.0.0"
+git branch -M main
+git push -u origin main
+```
+
+---
+
+## Step 6.10 — Pre-Publish Checklist
+
+Before publishing to npm:
+
+- [ ] All phases 0-5 complete
+- [ ] `npm run build` succeeds
+- [ ] `npm run test` passes (if tests exist)
+- [ ] `npm run lint` passes
+- [ ] `npm run type-check` succeeds
+- [ ] README.md is complete and accurate
+- [ ] LICENSE file present
+- [ ] package.json has correct metadata
+- [ ] .npmignore excludes dev files
+- [ ] No sensitive data in files
+- [ ] Git repository initialized
+- [ ] All code committed
+- [ ] Version bumped in package.json
+
+---
+
+## Step 6.11 — Create NPM Account (if needed)
+
+```bash
+npm adduser
+```
+
+You'll be prompted for:
+- Username (e.g., `your-npm-username`)
+- Password
+- Email
+- One-time password (if 2FA enabled)
+
+---
+
+## Step 6.12 — Publish to NPM
+
+### Create organization (if using scoped package):
+
+```bash
+npm org create od-labs --scope
+```
+
+Or create via npm website: https://www.npmjs.com/
+
+### Verify scoped package will be public:
+
+```bash
+npm config set access public
+```
+
+### Publish:
+
+```bash
+npm publish
+```
+
+Monitor output:
+
+```
+npm notice 📦 @od-labs/payload-pagetypes@1.0.0
+npm notice === Tarball Contents ===
+npm notice 23.4kB dist/index.js
+npm notice 5.2kB  dist/index.d.ts
+npm notice (includes package metadata)
+npm notice === Tarball Details ===
+npm notice name:          @od-labs/payload-pagetypes
+npm notice version:       1.0.0
+npm notice package size:  35.2 kB
+npm notice unpacked size: 128.5 kB
+npm notice shasum:        abc123def456...
+npm notice integrity:     sha512-abc123...
+npm notice total files:   18
+npm notice
+npm notice 📦 Published!
+```
+
+Verify on npm:
+https://www.npmjs.com/package/@od-labs/payload-pagetypes
+
+---
+
+## Step 6.13 — Tag Release in Git
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Or let npm do it automatically if using `tag-version-prefix`.
+
+---
+
+## Step 6.14 — Update Version for Next Release
+
+```bash
+npm version patch   # 1.0.0 → 1.0.1
+npm version minor   # 1.0.0 → 1.1.0
+npm version major   # 1.0.0 → 2.0.0
+```
+
+This:
+- Updates package.json
+- Creates git commit
+- Creates git tag
+- Ready to publish next version
+
+---
+
+## Step 6.15 — Future Updates
+
+For subsequent releases:
+
+```bash
+# Make changes
+git add .
+git commit -m "Fix: handle deep nesting better"
+
+# Bump version (automatic git commit + tag)
+npm version patch
+
+# Publish
+npm publish
+
+# Push updates
+git push origin main
+git push origin v1.0.1
+```
+
+---
+
+## Troubleshooting
+
+**"You must be logged in"**
+```bash
+npm login
+```
+
+**"Package name already exists"**
+→ Choose different scoped name: `@your-org/payload-pagetypes`
+
+**"No files included in package"**
+→ Check `files` field in package.json and verify build succeeded
+
+**"Types not included"**
+→ Verify `declaration: true` in tsconfig.json
+
+**"Peer dependency warning"**
+→ Users must install `payload` and `@payloadcms/plugin-nested-docs` separately (expected)
+
+---
+
+## Checklist
+
+- [ ] Build succeeds
+- [ ] package.json has correct metadata
+- [ ] README.md complete
+- [ ] LICENSE file present
+- [ ] .npmignore configured
+- [ ] tsconfig.json correct
+- [ ] Admin exports in place
+- [ ] Git initialized and committed
+- [ ] NPM account created
+- [ ] Scoped organization created (if using)
+- [ ] Published to npm
+- [ ] Published version verified on npm website
+- [ ] Git tag created
+- [ ] Documentation links updated
+
+---
+
+## Next Steps
+
+1. **Share** — Share npm link with team
+2. **Monitor** — Watch npm download stats
+3. **Feedback** — Listen to user issues
+4. **Iterate** — Release bug fixes and improvements
+5. **Promote** — Add to awesome-payload-plugins
+
+---
+
+## Plugin Published! 🎉
+
+Your plugin is now available for anyone to install:
+
+```bash
+npm install @od-labs/payload-pagetypes
+```
+
+Welcome to the Payload ecosystem!
+
+--- FILE: dev/media/Hero.webp ---
+RIFF WEBPVP8  	*>m2G$()(* 
+M?g=1WIϝzyYغu |pw݋w?y}ƒ?~x]'ߣCRrOz3/澛?7?z-K{wߘ{7G/?=Y?zy}x ŷ{ӟ>//G6w/Rl<~cޮߝm֣Iw}O7{tQuh=e-ɣ]fX01nM쌭8!o3Y)#~sj,\eج	ak,ی'Z$&kا
+F}:\; W8YdEu15k"GVyɨ"W^?h$(k
+6$Y㝻zo]JN#+jg߻J$#a+/);,ac/zʛҚn)縣-gWGyO)
+oCxKd7&jͩv$Ѡ ]8Bm!,BȪ^ݑ?Ü*'a(qrSp(/87ir@-P"o#ͪ¿&_mu?W7V/͔HhUBe_6ĖߜvFSAB7$W|E8#8pup5y&][UyZ)nzD!27:6/3-MI嶫rKNwiu{Tu.i`$OLmi yu?_%043t֭)~m:K0qdcj:XSwLJHzpSep=zu
+cJ3n3w]9[sRihP >/&f.ۘi{*X@z?☈Eh>&Uq%mU(T0|ca)FHȏ`-tgv=v 	'ϙ/e(V[66in[}/9}#?^w<ڎa<51 Mi׬:]4;uQjp4Bi[x'n^GФ쿽ѱV|̰dƆV묛P^΁<~]]Pzhg9dfHq9?5%29Ɠܓ-gw<ɰ%#KjJH,=ĶQ	AH &f>b8|<ՋcI&y2Eۨo\;pj\W.YBC~Xk|@XZõb%`3 #~p|ym@XRD½?
+8)JcpTӆ
+0
+u!Chpo[({5{WS7޸y%=isޯSBpk\ݪ_pTTSjO}	DD67EMV-ؘsJ֑(U+X]<<N,h5y%H̘M۽ah(l(<|pA%k{~'.Ր(JI7")C
+ 毽吭}էN!D6Q@ϓSҎO_+]C 6L`:#^%5	nV7DvIx=?R0ioVΛMуl0٥d{4-Sۭtõ謎T|=HnXi%՟`hdSJi
+,od7d:;VsͷMYBX/a@U`˃De[ژC@hS\PW^զSKȵiwT,0NywfZWz<ܠupEHcORq~0N%qwcД~Nk#}IᝡȆЃsD!njSlHnʋȐ^(˷4Z6_z"2],J)sRy\E>8\^`z͌]J0?kǚY{pMg%.+Z?
+?O躐$6"^׀!3KHtX̷]X鶚eeH<e'\jKV8XY;bz=_,&fwO.rgw}>j|ѩ\ف`GIƌ;cuۙҶ맀'ϑa|:S~Iu`(>t [$Cs,ʣAH	vAW/b!(6WKsg`;#w/Nq -J[	7
+;ފ=N6xYskm<苭ȩ㘢?6
+96
+?"x#X'=.c_؇SIǣއM:R8]$̓9FZ)u0oy֧LC2P5[RjC6.c5z'
+t2Xjƪxәw;Ye}n)2*B
+#&2FdI| ĄD]*~K|2t_Etց1r#JWP΀\x rkEd
++nOZn_Ui%p]/s:Z'KU
+*PIxqbI Dݒ{0Hk򈍎.6HƝ8c#GrE@"05H㝩P}AC|h+Ϩ>[_Ľ}	M{{aːO$λAO59`eڗ(cCDܮy}(-xH(s
+ͅ@
+Ϩƙщ'JVH(h} GS*7Z~E%sǰjv=So5}cRG5ZKeN' *PTAFt^ĩP/f1>A5=oy0ԁi?z6>EJ	nFԤu庙IQA/z"|>Y1䱝@Du*QX(2mWVQjP*U7怨
+*s2iY#fw$CϑC0)[%2pXu
+U
+`«HajhxjALk0ئ@X2sxWi1$>bNKfUGN̆b}
+<)ul0߾SP|V41C_GjwjH<
+T\#^)遘U/p\!@#Bszd5tLsZ2F-\lB4ꪣZ4XN*ҩX!O
+GnJwk\qen2DIi~.KXGM7hf e>_NO^JSp
+. ʜPU1(0ŧgŽLC-2.A4#1Q	@Zy8՛|'۹{q$Nw=W^paMv
+vYS3'bSkӦlLq\Tc`U,?fwnBvol>b>P0Lz|pdjO8.L[VCdAFgLٹLTG T6S/r={]?MR#WiW@&W($nu
+Jy6mOvuT"43WpM7*\k9m*jpwC%8S
+y2
+{tC~Cp~A]9KuD9vp%UB/m4&]Ma;vdee<UX}5:M(y-D#{k<_O!م$Kuy2Ϟ 	=u)pbצt$cO)Pi~k&ഐEG:RN7	yTE+'9~b7{OnMgޖ*:D7MӐWziYx
+w;L
+:HnΎٷ^өipbl])WZ6jrk3NGW
+w%BJLޑ	l"2G%\`Ӕ̘~8<-<hE/sâPG-Vʭ>iǷLwܞ~MW}.cEJXUu7\o^]n~h瑫h%
+U$pf>`ͮBWSu.gbˉ{kO6W1F(c?+k^ENX*7h.	&a7hTzkSWZqw-̜1kb<,iQHʒz],Q3ͲQS\RAOX]*
+
+]~ntv|qսjw<ar׫` j3bLnww?
+S0-v"2m	KDQwK|E!MWn}Žo.Şm"OG
+
+#nx@V\t2m"9F͎`"~\|Mz|x^|˳16}7֒1>x|z {p~WJtul#48+2wg*bUϨ0g;3'MFxsU&S!+<\CiB%^V] L ɥM'a9w8A#tA?vQX¿VETѣ8x7 07lD[.xZGe1#Pb>!VDy>]d[Q<J1hC4)kEgk$w~MfG~?IY;sg37o	4nZ?9f>/|M7˗MKKezXc>p֡O,P}./6P%<H\ ]oQ}ҥ4XeP%@{(@)97lhM'"שN,WiRgTfȄg;&9 qJ#F-p/}iFq/y#([P)I|q=,0b@~ySSo%weEvZj2,ԳEjg4Q𮌮]ApGywe4 Șɫj	%(ԎwC	G&T%c"x
+IhSCiu_*3}"%~3{6Ԙє̓t$$zɾֻħ:.8),޳~yDF$&TMl
+E29?aOvk)0 䞠\ &{)ex@*^jbgEoW;t`]gx]ooRF`J5cבUdm{|4r5r
+	OԵAo*)bD9['Vٽ:\+*O-|{g+a%%7wTs?b;xְO}JZm]~IDav_fPųc9|21$]r J26Z5EUr+-ˢ`}/Mr
+'g^r۳,;)JYbz"Ӈ.cEn~9\w>G6cXLSG1cV5\7:CD#+]iv|B,GSz{mAMvb<<kMAc( p%d~&̈񈎦|>aA'6&8y
+DEps0Kvʢ2+FnB_uYYAE0 C(<U6kRDN	/r\=b0_$TFRB#bZCS#yDVu<M+yĤ 	л8v+B$q$yqaAV8ixI*2\__`xP(DfEI|TӔ Ԝ@b ˌ3zlpwVpCciuM8_3
+)$#L|~~?\[}(8n3 T)]Ve?!W 60SYrҔ齝51M[hcuۜyPVYwD{
+ީ"'/XG
+-2~NP-wʧĝI `a󈰁dŏ]^	pi]jOj췕w	Y/`b[J 3x?4nueM^:akpܰoH<JѦ2-fcl$Y'Xnmsʓ|yo}b,1 uUӥ$㯬@ڄ2#X̍Nݑ*O׀_ aqV3</,A*EUoP~&s7P·jW,;"Um6E6ʒpJ`[4zYHa^,wEBR8[;RT2>8GaYExڏ}>S	8@(zgV}@FI'	/2|6ǐq=AD9F6UO_$k ƔvW|iħ{e_1%Ax򅟃Gܦ!iJ9}I0&-w:
+8vqhEi$nFpB2l8mGo9yT^ʾad-:sb'nPd6`0WZhŷ".%5=*[WUk>r3O(gB :I' @Wn,Szݞ,ݻ4M hbR'a饺S}8u|2OvM@"c8D+MjasQ@斿 黀0wǷn^R_}ʭ;;uQK5w´.jSa>i\~{n(Dom"u!2ø5M6ʶ}ro5&{it`qh;_t):޿/?W"T<(ފS%֜t3H3eАʟH%R<^diLűmoM.MN 08TV"dJh{1޼ONNtI(k=[;PÀj41Jv( Vio$^'@5Cm\5qaRӥRϊ2ZkAy.-Ͱ)xnɵN(*v5u0i?uXesrxI YgdPm'}6D&(#@~R'o[$UWQk`ӹ`}2Tx/;6?k'_hS"3!O&\7HNǺw,x6wvP;;"NQ;#FΝz4D0~)]F1,BIO/c*
+HXh{썗.z8״3?E0f>I+4n*|O[!'
+ ڣ!E!
+Vdg\͊uވ?aߘ`	1\%aXcCT>Z 
+eP&0⡿Uӻleq./bXX<uq&&	U\&x¬l$ĺr9+IOQc
+G&W/Cvy!/_K
+[ʴt/69*۵%~A).[ܪg|nvu8	=6o:_jHw!?lVs
+7oUwkr+/v{ْ?|52OܹQۑtéy
+~f$S);xf(<&7(KuXrg1M\/ROC<@ k(em؂:mk+ev]F%KIS+[xeȐ=
+Ò'
+M1n#S-uT\e <ˣ$̐8&bEMyüX柎s'5xB84CpC m^ax|={`IP&cyME|',6Vj5@֞BY7uLC7(yP,7)+@T&rwGVqݑdet{2
+bBqGJvIZ!wzŠv	gsdpW*
+s/I^@O%ξ9MQ`~#w8俌X	6ߺh~Me?6&hf3{WTȹ+MaX.sx'0NGե
+MGz)K<
+{KD#"u
+vpvkT
+͜Ҋ\KQgR崾ɔb]%2e\v$c
+ueB"|"!B6JAÑ>G3_Yvq}ҝBڲ@N@ulWVbi&8Y1XZ'_Ѫ̬3s5bv9=6˕,U%s	4MWa)/4~@Kd:tp.{BIїn̞^Y7$d7ӥkʐ8W	>m})V}?Pps:xnoWnd 6JLoUbmN!|z[3qrHԘ:-Vך'ZuKM,2`}笪ve9<vAsNTn MJ.;\Ɨo88\LmTʞc!I:ʒ56 L`$X[p>lWˠ[l@a:x$ŘI\F+.]9WqEdrZǁܡ3~ۡ0\ˍ9W[={O!+Es>B}3zi֕\.G\Mb(Fޠ0W3VaO'ZXceڵb'\^ [=	=H{3ͽ>{]P? L{h6߹X!O:۝k1k"*NJ%<;-:Brobodi_查D
+&$>pL>vݒ>=/tBk᪟޸²\&wzJwG/![`GJy,\mF `k!
+"D4~f\A:،Ymh2_`W&O$_]^Hc+Y%Ș6]lD+Nn:e|!\l%1;¦͵0-tS1U
+ I_?J	S\F}{_1qDZ an8K)/u"<u2y={W-tۖj|NVYGg)O;#<eC<|l-ZW&4ҡ2vNzqozF\	3Mi8GrKa:!_sYdրh,3	,_,Vŉ̚~ qd	ʍOJp9lCo!HrRcg&2?v+oU)9r5ANrbkU-Zal[!΢@$M-~q{g4OUz$YClfj+9LTB>-RxM,W cr]3+*sk":n[@˺~ޱnJ1G۽1 m!t1^:awWJ=.Ml{hwU	`<GӶH&@(LFɉd
++Ww=wӣyLSIǏ$aTma6qQj:M*̈́!0)ؚ"s+q-YGҶp>cz2(
+\;ݍxrdK0h~Jژ{9(;F4CpJѾKuvdP͸[YsGj;v #*'hU,Di	3-,_Ag;B2 Z 
+ͬ\ySlYQx>q	f[$giAE(:)"Dz	2F>c=R8t_ws$Tt&qGe*#F-ȵ*j2U`xo5vc\M&H5\L\s)2
+};SKgyrG;T_ʇڭO5+E7Y?_r3<X:kNV8Cr kdw#عoܨ8-'v?3aUB:U@,AC/8̀4@f6pIDbHu U1#z1&h<m4AAN]EMRvTqi$
+6Cj hY49l-^Lx82(v4	86g5bgF
+m΢+/-?Xm 󲊃!J0[P{LYޑe=
+FC'z[UWэuTO3>*nb8˽:ׇώn~9A[?C}dWB} o%d7iI8AwNZ&$Sڥk,soڗI9̍G|'	rJXuV,T
+-
+F[[U%? sr rs%:	j8^NYT?	R\Bt:Qj~_!5;FK#ż<y>NǶ늈
+-PIP<_kϺ3dӟO'KvQJSnoG~itw9v@Z$
+Dz{K: fE!zŇ66/Xbh|ěQEQxdZd?^;GVۊ@FjWIld;>^&-
+UDYiox3^RQYtDgo_eFқxKQ^(koց]yBq
+,u4RSc2+=chA&x)eB+~m:h}cHB1k /ⅯBGbViY(TF Sҹ+%QE=S[vBNYj-@CeKlaw+Ux-ǯv9vb+-u嘊QV)^n˸m}Aն`>1}&L;KtnEWO\HZBgꆦL0uYK[S^ZJbEJBk.3qWI/b7'BÅDd :yB-KWʥgۻf/}	&~݀/iTG-JFt=<%r׽dpύx%K@'(%NdiI!&֌tXys.=
+E2KVN
+kI%tmc9b%mMjPot`|^w$Յf(8Q?ב{uo7uC CFظ+%3nINNhL/$^'ʹHį:/jcyWĺf/]
+ 
+.NO__9`kIƼmg.-F&K?/5X2C#+ND }0iDoWn.Ω+$E˚S;BOдoΙGk	S3.ʮ:opg9WtnQPtn">z}sޱ[߫_6+UPY֧E,*tbȂ9+8m"X2u?kAB4ZMa!,WY6T5tрu5;TN(X^hJ
+kjtf-xrx3 kCA C-q8j84Jcud:n zKs">.`J)zYQ}iLa7$F,DvsdfS<2;jֵ	$BS3#+h	o TzK2-NY.,Wq;NN:JPLQe[i("ұk
+_4<%C2#bsz;p!ob>tf3Tbwsӌ`n'1by`z)_Bgx{\crM)j-_k25ߧ	_f2x&7ԑ|vsP
+ qĸ_O(ǒH$/b. yu1 毉lUvr<^P"7Lv!IVeqBWu7ErY;IRtSEX0dBӁ˷`0"U'n$ ,"X,98\A	x'@|Q\Wm׺%<o!qΑ¤Ukǟg'Y5NAŉ?W;~S!^GdP5)Ga$rmƑƠTeȶi]PiP+Noj֎ޫ}JCv<7$b- AYbh8=-Hc_M)	"$F^^H[W}&	]М5=G9gx,zj6*	,COATY޻,,Es0Zi
+F n T̨v~09Ҙǐ́8{(Wn.^"+:n]YzH[Q F6Wel,myuL"
+
+}?-?iю1A>.=ؐW
+}m7B4#)f! nQ?_"ѧ/2lLۛG\}
+14Hzh׏Q8j4Wl@^cpZ+;H%6z]i-+JI'A5W${9a	A'E,?'wE$˧86G 	bEݘ܇LaЛE)4gBd.Vߎ*x{?~Ԋ]j}iSUlOʧ҇IdcĺXt]C})ټ8zwN\r'3	F-1~0d;kUmX^*IPS~DӑHUxI͒YnUιحK>KCH&?-HVa~gaKΞwl5*Qό1l :J~VPN4UL@Tzة
+z\2"?qokE`3}OΩOABc^#hzٷGgH4ΫFZ~P);htVE
+zU<-@'Гf5eoVm8i~aaSyWUK;1{?i[wajrtZy?L۷פA8!
+ZH!Ɛ'ګFEY)qMۍ`]׊v0#[t;J@2I3{.G^˷z`nOOO{hq[-ȁI\
+;ְ";Ʉr}k6N2LB:*h3Gh&8" tG=W_;`j{kR3H-%-QrrDq>ۉnNj&Ǫ@9N1IU5[$tARʟʥdJ\DiQ?l_⒑I>Qd%ř
+:|KwK1~Li{sV^:G@;>׭oXI@k~'olX%x,q53dK5O8k}u"+1K}km8ހbW.-v@_%*aC\	gSET>!lڡ׿̫g2RH8ZB&#cfm9?U!	"ͶU
+VMlnòk֞Y&oBVM)mJl44
+a0q4h!bHP IdT1p1U^:E=m, )D]$ݟr2dIYknp2/P
+/+:{XP9O`7R8WsGM
+x|LXJm&i>GxLK\|p?Zc_u+ln?Ydv?2tWYrM"ʗ2qlOn
+]+<S%UouW틷:LCG!?-hz26}2̰(,~{6ב1]lsMȯN2$ʢ-ge/OX)Q
+#L?i0+9t
+^:`N]vdZh~\f`'RM<NL+ػ9D~K)79xp7S .m^<2'[55fu֛
+>J!mFD	w|e>H+F!J[VuE0GGtC:Ec6v7H3lӂ*!n78fQ22#'W{9,@8K7Bn<l_1p}^邎;|Q?F>:O{пݿ6NO	1@I.Z PXUZt6ER
+a#'d^Ō)\ZdPTߢADh5fϮ[+*i_~V֙v+e[r1
+3vs%-*BȽ	(,@y$,吸&X.UĥdB$NMfZ8~E[Bgr^EUm[EAi~*>ǣ^(a׶3yB5kQ9'EdogYlLAe^7Txgdi8YKn{҅YN 1QyL]I&ӌ*cf{wc]&o;c@?^d+oK+`F֑dw`+~3j&:k^-%-[,xvT?TE.Urp"^MGOgIM墐=[N)#! ,?|^FmgYr5mv1a@݌)	ۢvZ HE+>cPSA>ٶLY}C
+4]6eTs
+<PE6;|SпX'!J,C;nʽ'	ndEMC_]Mԓ;vdꊼ$<?l%p<:>ᶈrX>ٗzYzm㄂阕cBdaZ^?$X$]wۛX>|v:dw~ݪ:nWwB<IO(YfMtAWj跎?ʼ@^]*)^5)L;1'3?D5^)O
+
+1O݋\1c'
+0ΐS]LcR3=hO!!PDdG{:{hVɅ,|b\H.< y{ÕG0:KvHXd1Yc>ل.c9SweS~BR l.LrC:Ϩ1Zg5'FT=X.\	!ڙ&PQ	H9WK\ZcX+c?i`zbAԢbxyFz]9LӁ,T]R'᱗|E%17nLkFnLЬdƩaAvܽdY]Jˎm:"`!f!Xy~XԴ	}^S8Ïf KR}o0)MKOA׹;$h
+lܴJyD)UZh[h:,ALE75?+nܥhxG:̍,^s yx{H˽jV<ŀC&d8yh́!ni%L+i}o؟>*{LvLg\(C(I
+jC懭p0C~M:8*jYd95&
+jT#a=*42I/tqy8Lx
+\q@t:}D LnRp\ϙf2#sHnΙǭ$61c\:؁ct5!饰J+GA궣ҿ"e_$.Of|q<4"l pl9orS aXbtqA
+f{$n43i?o'jZ)%
+U)y
+HeyϜeEo_MW28xcZ"r cUH+apWX6"BKg^|7Lsr2tD
+4ZOVM5oShZ%37xR`2ȇj9MͪA1U?04p=ŀG eWp^x洓O,>)Z*[B)$,lktbN6fh3~N<ګ Ap!̀5na`E'zY(	C]H3]/sK?~ӊUH+(5uo*l>mS-M5m7.hXpXC6kʫ9N?(Yy_d	}ʛN4t.\l
+}ZXY^gbe IhÛj
+ֱ`ujA tF׫=P
+@և5?JK{{kS@]g&A=>Cv:dO]@:6HPfF!u.3
+|
+E:)7~g*LdCďN!uƂO۫<aC*$9pGR}5N7Oyȟ-$vH*0 m/kTu)/_QjOfT߳-ܕQg/`uYw*;yݰMF 3}/h!6P*[S; TMyaLH/f^nj;m
+'Q:N)d!-x.> 7paazܰuڥNћUmccA9{I6'4AIN?s%z}77PFQFiM܁>ۏ&elYUќ6I^6SﳰoRbw8jӰiFЪVe^belς
+}#pLUt!l{bT"/|>ro}zgT+6
+*Pd~
+酽yL+;N94Oo~ā-]a;֕Ѝax?\,<-k(MN÷]ykZ4P{-Ԁ}9zu:M̕վ+o%;mz>/JKDRePVxP#fJqWpO}S+w)ؘ! :	-@v9h} \L@]38DF5:^ c٬DJ7$&_GnIvT&QWg_saIa/Gvۘfhc[S,v3.]`f","Ypu^r	bO3nپcuI0&GNY89q7w<\\w- >xզe&
+q'ko+
+5pZ2ho9br,	d_ *{6M3S+ȷw*L<l'-g>1кE-=S.bނ2#8ɖrJ(V];i3f	$R%iZpy#,(\r/h6Z;% dvwKO[xy2CE+%C
+T4Ur-*ZLff>gj8<s;q4$5Uv*qqihs3QlڦZ~fYouL@AGy>OF#D&$aT3;n`xWkaXDAcBLN5Vx"$iFh;bFe;^;PG"YRxk
+=Su6::wKfuNg=R@ЂVZJwS]F
+~vD-I"zZpI>}5B_!`KbV2n9v-5~j>FTM4\4^b5cŵZ",qcj"U-cbejN*
+T>~k')$H#?W~>5p0%x.KwuڔGYO>4;Zq#_;fo4Z|ړhk'#nfy+Nǣ@
+'(t$ zɺ싩YN/`0I:+ap<2E (B45}q$kl# [>ȫ훭ɚZۧK(Tw2K{`%j~ T"/G(쪷ÿc\!N:x,
+C$f	`8r5}hQȫVBt>7yAgUOrg.aIWg>B9+'@wb4 
+2z9k?
+#Jaweqg/?_Fw<{FM`Ic1/̵~Uդ0`GGyُ'_-SyTu!bov9exue}i8S_Ps<4}S3+hp{pfu!bc&&|2
+d#ڝD9!U֕w ROK̭78g&8ZJ*Z2H3~&w}qZbM2b7  ilH?4Hj%ivxe6LƅRcoq.A/	@|I1K9Rpb[q͇ا
+Z#k|~f+ @#?kdws'*tj?O38bU)MI͂[Ijm  yRAS975Tfam-dfjcV0bG^[V/1zN*[Z꠵ǿqyH,?Ч6ZE*|ln"¨6?6&0JX`
+"hӠZ	 c D	AQA.,|N.['Wub?՜E[?j6D 	6@n ZbDΌd	| 	    k?J/48RW!0RN^ejig lrD;{b 
+3
+^~C->!$MT->Fs  @|ȁ	\\R˄%;򶏒L*8.o@y+c!8WfʦfS1tmԱP/_5
+p@żX,qQP^f҂]Y|wzzyTK-IlR8:0vr: -g 镲3,Z
+gbHƎ]khk=B@Gt<:z9BppFP .%˘ 6 M#?؀D5ඐB[y_֛B-gYj?=FBRנCMQڴ0a#
+
+xlSBze3En`2ȨqPgQpȤ}cTagVVy~giD6QR ˝C@t+e&˕kHǛA:y*͢*߉OԔ$v
+m<KI_̽t[;U"bd(u>w~ʲw2E .U/ #>&a=7E2yh^f*uF7liYBJcT!"̊
+"fh=>_4,NY	.	l&g 0џ_A
+9m^>)`p ^hK0c}3?2n"U!~=M\WN)M@8j3iK)m*-
+,zȂ^i,hH0Yt	l
+ч-:$s4jt_8y% 6d򜵂6vgKPwܤ[ҀK@I3+D)D!Z;իH*`Ogf
+gF	Ȕc({~>=QS]/HJl-
+sGjrf
+)E*BnNG0̃s0X/tNAڜ
+@mz]@OMhaEs2& 0&&iR4yG C`4F:}M~&->MW>T`w3翛KtlQ$c	<V0!5Q>X3fQ?nK3Z
+`xiIiz)R;_6YI:K"^,쏸m:%VT3\2}F_[ EoZJ}px[O9dI$K4Hնzӑ]-Jps<'dFR8ͳ%FR.\7gR
+.zewXaTAmUUv~$bthsV;o Gr5zI۫g<8֭/<%wL/TzĆ7׊QrJ"~{ޥO'q	Jckps(l1aaZgT._%;H2{o.1lX)c]6M*}³#~Bi2hρ梵7%Vi|̅ }݊%UMd0,,jʂ}[dnmP8:Y=h~	ЯHHT_d!@i͊dN
+F)dBQԵ; Dr$j2#6Ei+'A'jVQ_LD`7j("˦`<3a~<ί%Ĩ1
+`5.IT wls,0GLB9 ^A&W\- ft%9%-/sH|`̘iw9n\3)gL	e˥@JPx fgx=B;a'CJt8Ƹ\Ɋpfh(Ө</)0.MvZߤr4O(ݷހk3sɢzmZ+nB[@( 7:)IpW_7R"&и
++e!OjlH,pwoTG'Dr"_B?eRG7+"E%$yYV^X!x/l+?IQڄ=`\L2ES: m
+s`'>o*E#9lcg7;T;\'.6TL$Qinu
+lXњ%jte\/^M_hi2s_.R}w|3-ho?>'ND{ ^lZN%5n&A:t߉p1&{i#b@R]n7T{{Jr|[m-N.)ox~#`VhFH-/@Xl< w&Tl}b39=ac-NE05M5СYAC ^J߈`mۘYt_4R-!'
+? bԘنQҋF	VREE:Y?[k2BX8M{!͕sբW;"枽LCx@IHeOAnK'.6{1^*g{v
+^Qz	vGqC%"W>RAy
+vН,HsutVÇI|x{٣W)	D+K
+(]i䶸4f~XyC"pWWjG@k/!h!b{\r;]?-ZאZ;MZd3Q_CىcݎGI;I>3܆#~ͤ};Մ6݄pDp4#7}Μy{,m{?"T!jJQ%Fv4Ð7NA=upnC*h&XuF
+	?"B2̛L "nrg2Tz=cG'WL0u5Fkx< erC!\}ٿi92\`_i;b7eLc\ 0czK̖a'2(g%VBN[K![tM+ڽ]1çZfH^ 'ܦ.b}$*2^2c( "^b/4
+ꃛ	5{2Ds=~
+7	2ׅJF;vP¾+R"6_<g3j(`AÜJ*k{+u'@[ntw*	_вe=k̻?l#WSY{'OH$19ZEf,z[)L]嬭gÄLd
+q@f<_!}'7e1;L3P씛DUWOa
+PsbZmT`rzO^
+	Rg9Rtaݢ%3+ӥGw;jqpB	NϿpRDiu	B߫k?[ysa<+#(Ex-/7i]qLGlTO%!W1bˮ!5ۃJ!2;?$_:6	:VǺaG)&ԆftzLs}Sb_}FƜn":mCJO@b]cNTWq_&cꃪC( uG8-)0q0bŎb,JN=֖txGG+<[;81oYf '8R>dN
+LI$A^$YIN7lǸԭICFM-A۴fqR\ -rCj+E{R6{)LIP	
+ j
+N(Gʁʵv±E̽X}ȸnoiVitW&Q1ed2E`c]SFKz@wU"cz9x􈡚C
+doՍ%yTLB0&V-$x2Wh;r1B/ܛGO 6Zbǋ0C~wMRj*n={/yŭBa\߼'׳NtIxcw\H`ڪx*łFTqdb_ٛz3@6ؼi1)fo6蛲T䙣*o(KW6VvA)bU׈Zn6J)4MNT#5im`Z[Z@2Drx,	~
+T̷}zaV]Y,%~%=ï1з8:벍펥u:fH-Ra1VHN
+
+uk4Go$%%6J(4ߜ78[m
+qH]A\epĮv~=;bTo/Gj'JXX<|F8!A&"5K|;'%`$-+zPƤk8q33y{
+R#8\9VIk'CZ4˝8
+Ἶj%\xc37NK6~G4Ujj !"@rDO ޷dFN|)"%troZsٌ.PN4JyUV":GEj3LS2 7͜6`˙O;S@eh*$-8Tu7KACpvO67d`IvX>kֶ{5/5ZX*] 5%Fe	@e
+p scsdd!0Qf6}W4ށ|&"~[p@XЉmKUeb2ľCs.%qpk^C,,C? hs<ᑂrl~aCz,&WFGTW	(R*g?Lad?L[q`nA;>ftRqsIk$F
+7Ě?t20VddPs`_;+"#emXL E\VJP:^[r0#A~<'ro8,(L"Ck
+&Uʣ\1ûWp90D.FD PW^yxc^9:<1sVf^^5]/\Fz\v46#ŧ9nP:og>l|zvWtҨ+'{2KLB`i/QQ_@m77BTN@<۴*6ҥ6Nw@䦲LULbi-."BS6"7A5wk#g;s+r4q R,[uS~2OTDjډ{?2	45P0)h	kX=ir:IޔJV
+PBcuH"jTy޸JK`&rWfJ@ePnQ-W5fkܛzt.Ƕx)`؈% ҉-]pI4^dg?q8خםdykN^뵫 h3'S-P|
++k/	YjZ`ֵ#.6.(ܴ<.w'Aqϧ	:h")H?ٓYcM[CDs;aI
+ZfzEQ-<	M1nX+95'Q[do/H1G)}We룗`\SھmnXl"kG0oˈ5Oo)uWJݸT"sF /Ңg6T+/a<Wc$Q;5_ \XU	gukD"	mY͗O[9	#+x٪Ody9Qc)HH'1@J?)K%*!E/}m9&T_QI%BFT`>&|ZHuʋ
+)\c<Gw#`]8'JM*m.O0lT
+̈ic
+!3Mx&4w#ȷZn !䈄p	V7I41VK-7#![}Ag^f[Qm)w% ֙`=Є"n%u)nmac4lo9ųV^ߜv=T'3\Õ=6ô
+C^.o5 w։B6
+X?,8A_3Ou$0b/{?[:e-{`ݢ
+0C%l[e=[{XSY%+:bukJnQy#C;bD5Swy i|F;akGd1*֖:?\c$|Fw{'LI1foЪE,>ӽm=;~6d[Q)S9"4Ez]U6=^67&"J@O2ל W3( 9Z"71	qy
+ửq9S=Lv$?|XQ/gNu,o 
+qAdyu_5~ԣ̣x|j0Eѻ޶Q/Q^E0tz:8˳@媓 Br\)fR$" 2u<ԮJVgصơw|M!w Ȝ!Gn܆knF>K&b݉vXSb(N]##bgP[,gy
+զ}c{堃c*w捷阴ܪA`r'lH
+_̷vaOLNyOJE?:̵@vsWGMCz.FeIa{K-BUeCBaTyݕ%DF?Dֲq>S7~PEgؙc	~Qz4X]߆AZ1ܙhIzӠ!Eq1n|~_KV+ŔA5<!s?.>;=Znۻ8$jI)(O#oˉkU (?0$>kSyQ24! y?ىmv1'0Ӱ%6<2RE%2
+il{kQͥCMhxEcba$#ycfCaO(*CbPumhi՝۝/ʖA&ĸ0lMLߩ*Wڹr.&djӫN/HQo)^eW'H`Ğ7kܛ	OLDPg}i~c"â{
+3i8$ZNX6O)C<n
+ l506JB>Ȓ4."9WX!~u=:x}ƻzy:
+3s4,JWKr{fvj:?`RD_2n2,zX8][^Jm|#$<x١ ?~u3bZ.?;0a|8`ƂqpΜ"Jwd?~,EU~UlyQ	03k=RVqX#9B;(}.Մ((4$2P,oN#Z,~Suh[|7q#9υ ۔=֝f淾W]dkfE('Ud$
+;њv3P	6H@떀x'v\lY20s>.
+C=vUA\FЩ.rns0o/Sa;m.`&M#4l.`v>
+'4Dxy75TG;:a<dۨq3"wrgL*p0TN\5G\Ƌ n#=XxB3<M^XnRq kew4)=/O}ܶC@v9]Ӥc+>dz<`7n|fKvyO_ٻW.ƅ1Oܞ%&v{Hg!yg1
+I#o8-Og_+% \tO.W|2AVL6&X9"eq6 SLfuRMET
+4h4OZU@vhN.~?Kq+R}8CƮ!%GX{A,yl̕tbn`i*UR>>XQx.j2
+"jv S{U|C3 7Ӭzq+/3Յ:jvYV	HzL!уPoyܚkAhb1{ge86Fr%ő,%܋	J^0"$=KK5D
+j82ئ:'`*&^(tnd'h`	j<QMNZ	ݥLGRxo~`%iX.wo.=*1/SB]uQ;4xG}]aOBzsZO﫰ɼ(Z4^-̃ x
+B/?N\1﹗{5|w9ƴiZq''Az72 UK^@+Hal2iU>(Gwihn?ʦlS.}@+ 6"8Us˩#ӵ}plmjX,Hwפ {N}
+f*A?ziA3hW5ck@gAZ0
+:,JHG%ge9`ӦfWoh0Doco)[-j`,csOt&5^}!b*<,#\ьIOtŗ!Np|m]cҦCﮧvQfV,J2mjg@oo:e=^Mjw̎~!sLD.g7(8*5;VI{#񇓢v-ok7]X
+N)]geXqW\;?]'6E$V{fB-Up" w6e|Ӧ`i&Ư9]e/}ZEU:HX~(ae `ݥ
+X{š\+xK|*fbx,Tm\>G?s,47K
+_x'>t1O8 ~^n7#ojkmbEa#8|.#@VOW ;U4|{ȷ%pቑ҈QfA}dD:o0+Nv/n/ٔf jP	sxpkeP@`L.jYr!i\ޑnT(
+y 6^1lq8qo@sهٲ3`Pwrg뚀ks %ؤ,\[|@KaCôb
+q%FW
+9NHse5tLHmx+B87?k=<\_.c=V7m*8nD CwWW?}JgE c~(N0
+_yp	X'];alQ|ͶE(CnfG)9@Qh4KEy9wv2%̕8[ג5"8OcX-_+{j-42i-v_9&&h?ŻQT8ћ(k$5Ϟs*gzmb8g;I;,tf
+M՝@<iTk6ƟrnQ#nM Pk]SF%p $kZw2^'=9I]G=ފܜ?fmq4њ
+k?S,#meJ}rDV:q6RĸFV
+82.a*pyG)%w&dw9K͙~ZU_D9&u*|ڏ+ ckXAK0gM]dk3j\iS2n+&#[G<nPV_7ľE'\\:<"A`yVp
+zA {rBﱓۮ:L~!9Yw=j'o4%?]eP'xh6GУj5/\O<CO8Ê[\tp^9p-Mtʻh|(:t,Rct@6tZtW+#/!eͼmV\<?XWt\vҵEl Ch{Q}(㗽{ݔjN`iPϪg-Y%8	5b$8krMZ 
+J&M8+FF 9%|jto7**&)
+̲fOHNz{HJ'<gb`Ζo&gR	bIX^=|瓑"
+p
+3oo}1$^aXFjuxC{ץ,pJ]wT<fSbK':[	({ѶXX	W
+2KYVua"Łƙɬ6xO9x`âF:GD[?@<xܤjEJ  nx(n&"}8}}Js|t$:#qʯfGk&SMē8)n̢W+]֯'ږuJdtTEՋľwUl-zX}tPl$jex#Q-#G.I ~%.#<bv7VyH⃼=Ցqoɂ'Ղp)cK$ŁOX@s~2_n="Ȟr%0D᫻w\jxX]2B=,o̐;sˬZ߿UPiAߠ×l-!+O՝zi uRYCӄ4|_1n6UC E79Ɍuhfyb4(IDB`.oJ͈WXI<zD	
+.OΧOUAnڿ^oڙڭěqSě7Vr>7νg)b<FyPi'|AOiN50^Q@wj,ܳI7 ;Hp>F-}hRM3vwߜ FbGkBҽx3|(u/Hq`h}
+^TAͺoBL\s
+FhmG*
+}I;Rj8+vf ^*h(EC[O=XX P>	\i$>_8}^/C]\`3>g#xm*`<9 ta>yY}-w>~ovD[
+J,б-9|ԃU  Ubdd2\@DʌPϺǼuW%Ѿ+. RpUwmVs4?dqR7F+|pe"nmm}#&8.%F	,ZBv,,9>O\uxrVko󆑌2_
+:
+mxgD~{-pwBp0/qypevH?? J/V1-HE6mBsyiG/	=3w/l&Srwœ/;-b0CfND E
+1꽣>ɺ(3}R<$J4fA!7fgձmã	BM: ͤPUeUCP^*Hch?.wʌ ٳh'ֱ-ńwTh>X
+Ϛ}:C7N\e9U$QKڭ?MW
+;fm':K+}TK*Uvd,wVyYsB2"*..h*wNJ~UJ9.ȝ_c '%Y^Ȝ}luniesIZ4+R{Yqâ1X*^߄|ά$%7 lUrM
+p!.gYyOz4D8Vq({5
+F}<Q%
+59{<K>hc
+˧n{6O7?\(PХ/.!#"Պ7сxse[Ov )PI 	)hԵ "͓zmŔ$R,!@r6^vQ9Zxg,ܜtM1M.̐>iǠkOZ΄I@#B'p|4Y+C7P+VORGK1Ϧ\q:B9STjH!M&T4MNgd^?LT9˱D,.=z6`eMo{^0fLj}+zQQ̥wlzݞ 0$
+s+J!ǂ:L$
+<Q%L
+_s?I4FavKtzH~s mAOu9WOeg9+	]GG	(>"RH62/.6|k2æT1op6Me}Img2|D">f8),ұg:_]I6NEpITlX&닟rD%(3I
+zcz{'
+d❑hhp+E+|x{G
+e,Pc]`'bV(4X["ם9Ua	T5_V;}PH[z;)[_@>Eu<Cq5>VB	.Y5O4x'ShfB>p3Eҽ)Mly(O\nRsb L q9Eҝ3|1~!s]3iB9KݛF9(,R?~ϩztxoűyo_VgĈoIÅAFLZ*fZ3ܪ:BOԋƣ)-Bf&. &e$x`Wg?s~ەQsOٲ,	K*<K)FBJ^vN  96iCPi['Fe\^{(
+p.)wBU$I߉bW!lTD4~T9{Q^ݨ-|},n*dUnn.%
+ ض4֖ȸz] VkzA)e\׸GkڥG̟M1Ksxa	ۊMRWc_\^KoB$hFf`Dg7):ոşj͚=0Rr#i3)[R]+Bdfu{߮Dhr4_*?9Buq9Lh pibY~qvdꢐwvO/[WAS{1+?ןH؏2,04}0cvNa>>PJ"Tx6密LhV~gNgbF[ |gfQTu{~䅎fH鶷H,U8kkNe$ď۫f܄_q⧖%:lJKa5naOX=ChKW	sMe*^22o3at+	E1X󚨙EoOV,T.Z9*,ly6GM`xE 'ho%rw>p{Sӏh%ړ-Oz/#PO;)I!sӻ	=;bv%w[1B-&2vTS\!KO^o3l]z{?Bk`GcdTYH$\ O;)JnU<p	_G%BۍxKe
+4b=.bTa;Ŗ	:]>ժ~0	jCVsT6%Kez?Vh6(>k쵰`}myov} -{{ 
+[^{yqL^@]
+;\^#һ,W"25.-A$yo
+Iͭ9FIaʣ/B{3?Tk
+0q#N=LvUUEr4Cȏ 
+N*MD&^(4$	%BD 
+#o l*s)*Imr
+]	Ӻ(wo\BRҨ83v4$ݾl}dn+cE7m>^Tv)	ݭy+u$/X
+D1}NX\OR(9fIhβ/'k}͎vy홃c(uE։Oǜ3MvoE2,\at%[ce-0TݔLC?
+F'!g$n2Bm'2DClFtTvѽSVNlsR9Ё(S1Ĥ8ܥ4@1wn~EANUǁ]vA(^֚h 1N.Gx-Մ]74Xɣ㩠4'Aؒ.ec]Zs#vc	@m3k8)>0ﲯ^XN2ECl\!eZ]]>B%1RHvF"H9"n-Z=gR':h._DYeq M$A?r#q>}1,b9מVA$ZU9 4SE^d Ԭ7pq	B)"9sLJ}*Hw1vWcq൹MAOwoW|&ֽs>Z'cGUmm{{nͽ@&_^q8WZG}ID%%!ZyPATpʤWS\
+
+i0l:{c[.B=%aYxUh!Oޝ'$(_-wf2jv|RB
+>AtE?$<Ll9F3>ɦ<10+_HP]?yаڹT Q93{:L*T ok~9JZ|FH^w`)ɹh#(
+e.&|zO\#UZSLN u\ Uixv{BYtR/qqn*G|~{
+>P(\Esr)R]/C;h=8/3$OV8-ooKn5BsjOO:T˰vdI ~uҢK]fGOD*)]ߞcĜ&48	`gTp`U2Cx &^Ы$ޜF	*zmۇEK_v.%U~IcyNX@Cͺ-A\}n`Nx=:PO{ş2*®?j>1nШ^]A/bjupo	I%ZL*}-:#L(Tmf@V{8L㴃JQZ.4K]nzF4,$ً;rn[0ǭ%^V&mTYw*{BVlfIb`^5vS^a/6tjSf7m2{p}W'@⼛eΟ|p6͈H:2(B11{9depԕx~\a9<s"pq{oe^Wϑ`17]wDb,~`" *&ěO
+؝R$MitgTw7-ŷDbˑ`@!p:B	 :]wwQ͐ieKjNf_utEFG[Ceno%xO;;2KvfdE7Nw_ ;{pD5GZ÷UZ$Y?vV|Q#ywGN#T68};ENwFՈQ0"nMC_'b\6S0hE ?5fX"e׽m厫hYW_i'
+,}/!=F_oU6[Z G IL6C5?>DL41ugT	~Ei[o>i⚺A*'Om0~qEGs#wE=X<s+A豛'"e=׽E>O	SI"aP? bU{feE2wNTOQ2dꇦt,P5$ s#f(GX91X
+J#~@,/zMM
+f	[D0e1(k|]Q̉cІy9ozs+v-Tn.$z}3@Jgͅ`(?l,fh%M"
+&aˋV{EFP
+Ή`E)Gz<
+]~'bQoAqrO(J僈-ra^ugsrר*j
+Cؖ l *
+	ptE5vGWm<'0Ʌ@X,[<K	~O+	H>
+n|_EsETԯ[cDSY|!%c:M(ITCABTIGyQf[IKNRR#~eIyw;XRZu'%`"UmߒĠQhUө+7m6뒡ZS]]4=>:kx`Pƍʉ}w=VkIY(naʾ&W!WUo1
+3_SjqqlcԳIrlBxjYUFU=-ԜׁzѺn9]CP/yX:zǪe%ĕ bTK-#AAB9V7&<Y)(ՠ8p6Y~;aTO"0؅,Y)]_N0v؝
+!ļE$	k8^"&\(F1GGNxcn0j|WQw#i8QNY*
+)(u H߇+.+cq	kY[&=|0]1
+X}WZm2Va Q]Bc\,AXiAjQ1YO{yd"=pzj4[
+`m&$y5vٹLՆ;h0.֑m7Q
+]VZΫcP {D޸}Hǫ
+'GX{	PEf=c7*lC^̿-H*1= >5@wDR5 \LJAdțj'{/~afݺAԈF\ݓR=Dn1G}JC+K "k[e]ײ[$Ln.;ݚI)G~^`%URCO>L`u?êKu>}SoqyKgh7dnWMȤ+h_~'&^V]>fB+a"#*Pl͟y<ۤ3|NvߙI+
+FZA9vQ#<&}c'%ddRIcK͠yj7"o-`
+^Ʋ&|"Ԡ]KA>
+vYYfwQ	zB#s!\LG>"jW 2ZF.QBݨӉ
+zI<XHncŀ!::9g}mO1QAH[	g
+hkH	޺f/wAˏPL
+/E8SOjr5W\d^N7JNQ0Z\X܈7}	÷$
+l|[Է׀?NL6}BUMtg:K~
+fח&ړd1 z~ЋEP<˸s)?U:>
+:ACLlȴ;<3<K
+nt- H_Yh縧eKV,+jS7^ cSziB@w|eL9zvW9 ^ƮOφS$WUqlOM-"EMuZHe48>ýnĐv,ǝNZ 9/HCOS<Pb)Ahw
+!o2RHMQy_ҷ>RifBNxƽ ,]"};e=g!18[;z^B
+	6wfր7_P?_f ApD@%fk,n@Թ[%bJD1.Z_qtWg:cxډh5{Zc0cQdw#po DZBEeqTE;5V%9B%s$jit:lޛ 09w{lBQtٕn?X:[o] Sy'nxpKdܛ;=Rw(2^/LJ3L%v/y}f
+|#Q#Epj+E(>Iy4œp[qH"koSNhA-oo?ҢYDU6G&F,qgfk.*<4 tLpg>HC mc2m
+k(
+eK%9}_|	-R:2*cǶ7*s{fqyUk	+X5Cļ4j_CB^%r
+oP'Go7Ɵep&Uw41z[ݞ:jr:_)
+F
+n:EJܶt=*kp40@o _74Oxu;.V)}
+Q5cw۳՝<}B=i0XY=r*?FP
+P-E'<Z]`Y[וLm%jd38YJu9Wo-o2ƈ#,"`5?I"28G̼8:zE}ta/)XTt0E\wZ2373FwJ	b0cn֏뜉So][[q
+Pe
+7CX
+CC&eTǛ"j@dVR3
+u	z)<^
+/6CWSPWƆf2'-0~Q>ӡz4a<yJRq[MA(زi8>s/F&F>rtOq"uPnl'W|U%*fw=\g>.5,&\&S ࠰e|	BDg2}P;g#b#J̯f`a^KD^6A~ r媡reH*J8tyG3+t &A$>o7,iA%zo1ƬO1G770?wMIMFș݋!D[$G=~Bt[ӛJ.$@XL:u/m+UaU]NHKHF)ؔ%ra-Wu3;Q[vXzȿWiHf_N=9aHgD}.c|u}t# b.g_&jӍɆзso+m<+)	en,* lv{?=+s#F_jgBrhhPmoGhXBhD,TβD܁Wl9?Y:/[O={I2Kl]
+ T o(SV3/yjaہT3e2]nB8
+]4ua$+`K@2gӚ-8]%,X1$alZ*3iB&]ALI c>N$h8#?
+[R Wk;SB!5-ǌZRy.h\>tK$1RPk
+(3xpSa(;}jò/1,"j9\B#32g8j=0SV~0;?
+	
+Q/	q ~q,ǭ']K8BwCrʨwЙq
+ǻ)ʠqG :O[v`8+჊iRf[fkS6h<LhyyOh[aZmi'sMJe]wK u<X)ЩSZߍVP L6*= 	hSVŖ^KǞ 'k3?ah
+SVBsU'At@e_}~g +l=sI6}nX%Q|8۲9[Y,xףd6
+86(e&? 2y3)"֜IuFS(Bc)X4&JQ$tvP	?إ4q^] q3qV:xqٙ|iȸUl/1:m;ޜΥ-җZNkb-AKOngR%a~Ӝ࡬tt,9Bf}MkK39Z*i
+ 2mtZ~Ɣb}|@᭍)BLbS]Qĺ,M;¿+ף
+ Gn*PO\ɡ+Ŕi܌ɀtl`\q,^Iq4/w?;ųJ<ZwQҎYaYgԼ*W:]JzMeuO괤2)S /VO"F*_ִ.IScê /5p<"
+Ӱaߺ;JM/e~'P!,fP܎7 Η֭Wo7у R诗e8Hș3i)mJ=f=9K(-g$O	'/ L6;ѯo@C3[RG9ߌ	$8GΏۃ݀T2p.]!$\fV+#>	` cK;ĈB';42e>
+Flұbpn ;ʒ,Т$>d[;Q#E~04LK<ց)\1vF'KQ+"WD~Ƃ8rI)n3Z/$ G	O.VG7#e\0=2.֙jXsEV΂nږ	N_i
+3bW)M ٭p:T,۲[g53ly0Cb\UI:U9I;$M5`˔UO6D^JG3CJH_g ND\VFZN7I+e}m#$d
+QR6́N1 W8,Mj06; l4	*cx
+w[$)6tn`E({@Znp'bԎv<&ba)gc?'x&~JWX;&=.H
+y
+nHO#w'RxEu@/0\PC!Vчj\4~ ca~Ж"Jb%H=MMhx^[%saPȸUg=C@8&j/'+s5[f*l~rϒ#%I!S~G5Jvl4@<̨bb_\2uZr2/MihK;NWme
+?˳^X6cG;^/[ᝈP	s& HG,׈4pĥ IemF-/ia_e`h.:1_FA=vp"cXAJzKdX6͌jqʐ
+ȤzSj<-}̣vlM.}XR`UhɔiY!gG	7kɉiLB@hΞx	Y(..r-m!I^w.ƫ~~ZFŤcȨ*ҚH>|Mrh-
+o(H3Rv.'I
+>{xgz䏃@80Bwl5E&X5SnAB}?,{u`l4K"ug5BvZrqxفLR@ZE{ǜExzqz>%
+Ś+=t銦8Vq9͗tBBѕ<yLv"D K7Я~痪ձLyA-FRjJdLG2n B9ql0RVV%i{uI;	`SQ*3z58
+!$\c_|@2$V܎Eӆ<C7rEֆz'Өl0[ھ?8nC5EI ,G
+CTB-	JX/ʨ[47)^XKyY{&EU>p-@gH#lYea¬wnz}O
+fH¢)<̆lcW>ႜWᓓiiƗ3gi,䈮Ia<o$O%ԟ(<Cf!̨[*srd*aeyP	M=2pVܠAWebS!aQ	]!aW%{R<uhk&w7b\
+7i
+h	:
+L䳿 Ki\.0N>W7j5w{דX撀a<P	
+*
+xY1unh}3Uݼdr-v7h];~]kY8
+4ٖmBS<=3DMҩg@<g\ft|<?do(a"rh67Tb7.n6rU0)yE3+2@"	$
+I0}bM|5[Wf9~Lc|*s#8=`BڶVԵb'@Xk՛(Ӓ<2:cZ:mmjχ<7=S㒨amqlB5%ƷI`t7^5 zN;OI^)lYRBëj#,IOCwیf/X1YMQ9}	]2NEVm_jn7RHҤ_4QEa2;hϬV:<A8&y%& ;Ljle9"%(%FH/g@Xcok4]a~ ؃yP gMjwTZc/񐌒|jp,ךE >L:&'_%N4 MQq
+7d%>ѱ蘆{_p̅e&3/lx$<2dv
+ejyͨ-Zp>R&d]ޔ%78?xWʿJ.ڀ@vdXpdv-	õ2
+P+YqƳ káq'DpeZ蔿'̮Gwp3M٥gF`lM=
+jPz0~þN%5CvĎ49rfMY^!۳pQ
+Is@AY^2f
+<:K22f}`a!oa6ZWZ}g
+;"h?ƍ9˖HGYn4""G<tt	hdGl]7cNYh1k9d~
+zjv]Ҕ֪RSBʭet`)i3HBUfe!đWB?-zJ15fO=F|-GyW57y"<nX)۠a8A|_9Ve@}C ی ;i ZF5_mjo:
+es3̾MG YA!/}Ģ/ОY3LG	T~\)=aa	ZE@ި́MT_6;^( hxlHIZtF?z̥4$9_^]DeH^	ףyN2	kr$}BaF0Zp3;%Z^F	0x7b?"<D|6;!/ S,}b|K(kτlJNU%,˩
+,9aTB]2*HndF${%j|?^ҙC 9[M{L8^Q(BcY-*u+DwrlOl(
+FvlšT
+S^]L[?y_DRx!ΰ{r2"vZvځ?6x
+c8PD4Vl	QH>"3 $ͺw5'8	Y= \C
+w5&1ÚL"zfߧ5WXȆܸvVkX~}ޕWrZۯ9/y^i	kϑеܻ`5^+-fnt knw^BR_+Оkz4Y\izvM?O&{|"+QB|\M+al5纆0n
+XQd]	Qe蓽d'ܖ<ϸ]ܢGJ
+R( 5:+`'Ky6(V4Er^
+s _d#7u¾Dǿ(xfG|[E4~#fTcmd-[0nG
+4 O8':NYs"ز-VF@eȤR]	QCD8O|%6އ@ƱfU9:d#3i`z>	䬘iΏ0T}nEA+ĳ9<vmo"At͞QyÍDubmꬸ|(t߉n%n̮V |׉@QK)ʉ-1nsܤISU7RG')9QK㛧(	c}5ɿ<t70<Bo
+KcϮLZ4?}F/0sQ]uUt
+ZyԴkDZr@%lO~z@ޗ="T_vĀ;%	gH\f4/vuTm]$I8éˑZimm4%j
+dZk92ؾ7$C}[98v:$0L
+A?O?A,|uMErM\Uun Qڈm
+dں!e"@ILKTH[LHMn@M
+?574ZAXхv7]J&Hy$@8
+HMl.JfvaRN4k8c\"D+ߢΡw,Qmz8*Aڻ7WĖ\ƀ\U24&l&
+>A(,*W_([?[3+Ku@m=||܄"ص fS1o=a3xJhdn=tW$V`zE{}hlna:]!R- ڪ8bՆtkd͢ 
+SG=}YMrw)mF.cyW!
+:I;gg>!"J"Fsz:W$FRD@V
+
+TqbA^-
+'m<
+~hK7칆l+sg_[?̥PAow%}*	c3|2G6
+*Osr&:>XH+C$JثW	Ws^wKhV}$<ܗ] 6OKd{
+YYtG[*feo(v	8sg5:YL@sJveU5/#n##Lw("k߶rAn1WWt~ECjpл!cOv&{ϋXaA,Ɇhi<=g :K-JTсV}4EcmwPT'cBtK=}z
+Up$&һɥ,C$R؜	x^i`mm)F,̆Yم\SֈS&ξbB$iM#?ofc\`VDflzm:a Bl3pX/
+oGmM&mwHT&No`D(eo
+UVFɂ͋0<Dl&g2ř2J9k9}-c vTыtL>#zBmc&G9hi@q &]ҶF(a\A4o|l)w<_*@ŧ>`uE'ʕyvQd( Uû6Hk;}A
+,oJ	Gˇe_V<N@cKJ3uA=&1,3`dEjf		=kFbJG8fY"rDs	Zg"rl*3H.#!4N S} ,OD{=:mV!}oAp8!ž%_ǄmRAynvW|()8xsZ)ʱxѤb{%1A9!]3iH:jZX=lUz:X54]?:ʉ$Ïx`Cg(H*RJ	:$r?|sn xjQ ,"ͫݒA|N؇~I-%%!Zk|p_.KYɹFV\G{k]@ՆTd֛ڂWSO{(yeՋpǂg>ҺF#KhC(:>Zͅ󃳘;c!)&Q8:?MTR\
+0\ 
+,BAҷk?vfoԒd2 ek3ɦA0ծ& l"~'ѵ6N͓8Pxr2kc;y|Qq"7%}83aETL{pl!~Ԍbw 4x.f@dozډ
+$y߼$TS"ʰ{cl{4cɓHMe3i\=q&^e;
+W5歯
+6ӆ?R%j:9a0МLhIs(LmoZc0	h`/fiه1l'_HT˅jx<z?n٫=S<e)ZM̓A\"6L+Q7V ]<}D*)9R5B`B[0QU{ CSgI!
+XyB#𫨖swO-,\AjGS]Q<_,WԞC+7B	_ݖ]rd#wm?E|x~'eXkxc%Q>Uon[iW@יu06Oʟ|Ė݋NQʍ4!gx6$hJsmr bec`7xXGP`#6>N >6Es5*UaLa:<ڳlah!XLW`AQ
+x.T5WnIՍUXqGfM"I9ϔ ^M0IR~xs	x$LRJlqD7jT@yd:R@ QqGS< F̐f5,g`TE]Wcayuԭ l=|JL:nS-Ji8is7-!a<Aկ&5+u	(1}X^NәH`Øi3D{KnҶ
+ԑņCeK5XNP{L
+pÿmM*,x)tu/&; `|O"Əh$Ȋ@Q}[wSh76s|]<p:)#ٔ?i{^hvRFj
+EFl"A v+@kԾ*Ј8V Bz߁3ge  wWE:JGʄkH򏾛py91E][/%"+D7?%oL{^x<8͚3lc?"T<I]/SD×CbYԛJ4KϪb#mUs6ĸв]O$Ͻbb+o*!\9lh8%Ez:+{vW.[|xp	.:"1	J#~0sxHKB0Qc'ڹ$A*BHrsc{h=FPUBr7ɧtfYLˎ`ʬIN@e'`hX/۰@:b؛(6#4bc#\zem'lqrl < a@O]3gycn
+~ǒqo	PT:P[ Lv5ҨCQo6HvfLnM"}6O~6׎NMð"aG>7~i8.y#!mW8--0#^L>W{{mɃ$%K0,5dfTUz+4*8lMp0QAZ}q-s9;u'2c<3ήK$-% b]j<de([ Iq
+O.*<mv廛^aҥ%4qb%@>CRiN"FxtRw
+yG.OaMGad7ɅxBjֳΞ!pRl]1_)YN>	|G<"%
+b:	- opl4$ؖi{niu5Kg
+w~Eȇ0@jD"R,lwc>h@ r_zi8?/|:KGDWse	=p4VIP{Uٞ-nyV+l^mך.*F]V5)ܟ٧~°˫ i5DQ##Rd5MA3젫x^poC2HV.}#w	ggW	ϡşm\8_V>֞0D9&)|?ת3Rˎys!lqp#֍چt^YЈ-2UCn	3YGI<BTR~>A).te?ħ"j	jgxks;v$'St/4>(?7r.M$muUf1*>{؎D+r!g1GAALvG!vgwJFr )Dx^h(v `Oە0y?dŉ4L#6;tjL>g|MI1X_~T_'59H dg?f%dMvZ`6<Tyi5MSȂ['4
+y׀3d=~s^K+/$ksFa1ިZH8p\׆*L`mqMAOnG
+xL]jhT3+c^.RX ScइNT.&s֎!1vՠ9MN 4A.{[I_B+ ] Τ2oHܡ36u%vu#Z%#LYn}-#&wO>ٜn[V_Qщяo	
+/
+}En2^oB\ϛĤGu4؍T?CC|"Җ}G
+\
+_ї9B~89
+.?où(_t>/{O@lUE$H6MHy㸢Ky$sq/cs2]n1ڻ~FkXZ,\"۹$P)AUJ5|s_$O
+FΪG?TNFܽXK=eWRYIٷC"
+%PB{VW%ͪ˒HCw.۟?1$a"	zQY'c$Os,NZd`
+@$7WO	6RZ@	ՅYCKV$ES_GՕܒ z$Q!v2Sp)nv$iourG:L4J$j#Q"5]ɆwB~C0ۃ/	ϐ ԜfS}.jazT/q9WxٴM< .kfuƒFo-\(:=Cd3D@lD5Jyʻ9TNL<H$Xa'Z{܏ɔ?Iw_(0u^$B,(Jy+
+vG:p %1,rv=o˦Vz$5cU`R%چS_|^M+r/o1T3XLᓥml1},GPt!mKb=q	
+w;3kT'c$i15A(< G;7 ia g-DW_k̀WiM9HB]/^Ek[5GJCM0FЇwդQfmV&=d*0b`9䦈D#G.\r7{H\U9D-Bk
+]]j&yTƀ6pc6ty*!a0"g.TG!C5#Z;buV,ߨ ήJ3G<J}adG*|X
+]v%,tiAQpܴ5(H
+8BтBW[
+Q<SGQk#N:6'ӒZ\A:+Iۉi3]=<Rtͽ]~%3MUϔAZ aJy #I鿐Ɵk7wO
+YqR6z6"D@' 5;#)V0C/~	4XI55ԠuE:ы)K[yMFJh>
+xo][/.^6TZW$W	fIeDR$MEjct(Z;`{L"j @np  |+$;"u;be+ <fۑJt-yWDMVbՔuXvH!L|/%N1&[K34}kK	"K&Mpoֶ2^K
+fNU\
+Lnn:blfN\( 
+.tPC.pbIWO
+IKK)dJ˥wiJd`: `|Ab!$5̇_|
+u7񤅹M%;C`}')5}GQ&3{ԀUǂowa9SJ$eGC1X2e|&œCv?&mdJ_]UĴnT:RN-A^ʥKa܉2p-0Xç /f9cBщ]BX·̑PWx#vfi
+z1c9:yRVD+i 'W?Z킈!gw;::mSfJIPs(ǉd殘^o\R0V&Gl|!Sw!BCvmv݅;ǯ%W)v~ u-?Ԩ&wvő+V%Ew!i7%U<h*X,Kw0\B$8uTC&LuQr;$x)Ǫ}hMBTA}d
+&ՃW=EǷtAÁ RA/6;%F9NhxaIq	%"sq?W&fE&ErD{]a#$(n[IB\8p/}%v}
+np7{Y$ύJu{;Ӂ{1zDæ}%gKR?2l'wndrLfyįp @鮁RG+م81ylʂ\^GPM $gZAqΩ@
+t?#-ǰç/z@|m{&Wz:CuE\qI`0025閷xR{k^RMh<mT'i#rϲsWSӸg]eJne%RW;1(EfK[	FC'Au|>Fn.:Ղk5>J8PRstcGTn=6fߵi<Y6qIH׌A+
+v/lg>ݕ$9?.l̛9+-=*:;`z':`Y0tz]CpFU5Blʜִ@@ՇfplO
+I|3H5ҙbxz->Ivʨ4Ɲ,'D /@!ސQ=y g,5a|ČEݨ؃V`?z}`A_/#T+u 7K$	8!|`|rS{c#QcI͑k<?%%"=e'FiH<h`l,CsweoaEQtb^z;LGc\$-4K^|jRg4ܸ pe&1+В%;FaQ=CJZݟIb\6|J$,?cs:h3k-h<*7m.h0C9yk7X -|v}T/0aޫ{
+Vf0mlO.&"SIL`<{1e$p7R2D
+Qu1	=o-GaǚW<&&gKZ!B/W`>F@3]5ax+?]k5$zѠ7kvfz{Z=c^m~\TfXC-<`[+Fy_QkUJcKk$l/IP0
+@u8*5/|ie-L9]
+=8=H{jmBR4t1WC /"ܴB9^\$/נm,`[ֆ(!{4{/b]%>@#ktŌx25V|:fr+fcFgU'
+} Nҕ1T8 h,X[}؍OYݬg4dn@x| e}D(@n.,b	xo\+N>U?pLJFAb]j ̹Pb?Zj:AԉDhۿO4Xg5@͡j`k;ļbC&8_>1HF!t<߃_kaԹ$v1na?0 ʉP߃XowHYt4Cn0[q[i`OaNS,l|̓&k`HOEYP0)Eӫe0>9*s(}>ZA~2lG#A][Ԙ񑶏\/罪Dr˶n7F=
+)#o/4N"~}!¼j|fѪ&bQʯVK%WWT N!@cxuR1({zOtN7B
+z&3O0tvH餵D=4-׆ h/3#Q"3
+cմ">R4
+4u}Ӊِ*vE~aNg9S.)~'pާtg}XeW|SHYoZX-e7;	Hm\@(LM58.G(axz):WR+[v[c]Ȣ{/|SF3o|7Jiww=%zm"cŉVc1ӟD˸#XjSYnq$ˉo jl6O{.S@<V	!,ZPXgЦ99uWʰT%N&$dDQ<Ӵ*|Zp! d
+'^
+wNlf|Z:Edaw*xj%^D:i@A`;y<slAr(LcyN( relO(hzFbv?ijA||(poDsk$7<عD4W``Gϕ}>Pk
+׋R7"@boÀ$ /Ea}M(!L_Qx_j<VUqEm%,r/v:,q<m?
+0'{Fs4}/6br]cj?cO`h4E,%)Ӊ@,r?;y4T/uQEfQG+'4&JDza<]RZQ,P 6+xhNbe^K`_pQ5 G~ԙ6m|߬Ǩ5'jK"#MꄽnG;fxTnEsϿkoXl[WBѦToo<+ɚHAm,?M#w4hS58"P1Ҥ桢sn9ø@i'O"s3v'TM,	ԫ9_5TTZx{k?uen>n"ژVfd}1 9[5@&>zJM3
+rŪ\͗{Ud"5鉢?lkWT4} h@H
+UW.E~܋YHGVoƫLN=F
+?ɩ}>^#x^)=_XbJ]ltfU?n<ޮ /'s0rٶ'">e
+e;@B>@Jgd0m}^_Kp]J]g*025h`sR_	lɣ	g0+إl_.Ms\!ϴBeeҡgń˗BHPAF<x/Óy媧(UX6fO"S99ފ+uV2ǘ[)]+7o;/,;Mƅ[8J@ik1$t-Msi!>q۹f㬖⚠fǗ=1½1`Tl!`{tP<36?~\(_Ŝgqf34X&46RODdkJgЕ!q?ȍ98^2??V4^:FF"㮟/ih_´ hgiS`7;|jD"њ~3UJ:K%5oZZaT]T~ed,Af}VbՌ0rymL+×3-%UOOML&6	b= %{ɯL`K_Bh#y
+m(V}?+`֐И[
+$\?_A} 1\Ǐ{$0Tbﺯ_ThILJ*!2]R#P9#?F%W"JNRk]FP_t,к)?_5e=q2{ux5&,81zĒę'#e\`&FVЁX%7P6'qr0%
+;!{4e]2ګx(%E^%!5'e'j
+.n!.Ot-D)}$ЇqDQ'5Φ/@
++dM!`<m{r~^>qBIJl<M%'@[a؛ކ+ܬC\RmUK2+'ùo%%y"-1s"t s×Tӳ]6!|b[VjJCb惚";\,r3t<yKBKvm/Gի`{1 f+y-E6~nTI6
+9Y
+!/9GlAG
+jx@?`xt2ށ_dh:u~v'Ǔ"W6=?ZtuH=d@J}"k歇\> 	dB7oTh"<7!)^^.Yi-15C^:?5;vyjc?zÆ4ܺR:]6A]&n+aqS}DXv\qCEdEv4y$opgʀ}VRsKk#BV"sX-u6*3}	) Wd =#*Hq2|x@Fqu7^+\s<TZoVaN9N?vTskyXbavnϣaq5xِg*ۿX$^!ԖaIЁ?gX1K~9IMpYTPsV.t	6 
+
+A>'Gk Qv|2%q mAQ\3-JM)RA{<U,qs5Mģtjjp^5cШ۳)%"̈́_J_@Ґ8k|7퉔8Pr3K%nP{N1F|ձx٪Z	coG
+(nU9E$="nWD'a;;ٗVaxΆK<)Xlqs;	?3[,U8Q?"1~[w7Q25լ^aF]U"YM%Q05Җ͝Rk\"K;05R NkrwxZ 2ba6IK\n5+ƊZi]x9}L/ULGzs'Xj-=LXe..eNxM^hAkLQ.`E`9j!:4; *\l	>}S(<[w5Ε0t=  ovҹeTkc57"{
+oM335&n:&gW]^D摤Bcl6OXx-x}g
+OGpGp[&hܝl/Ue`g~W m"ǸH!LHtE{Lr3&tBUm$w'+ˡ8C~;6r #[?WsVpLw,ƐT0斪
+l'uDDΛ92~Vbw_0%kyJ\p])L0nG
+?x
+ŎbB$C;t<S4)JݹU#Dј	>W{D@|]І|zuG)jbL)̚` g
+G!JS%Ѿ2hVC@|A?YVoP4C4RuۤK!
+D"@!=RxaXW[<mN&1Y@86ލ~Tr$=%^A>Y
+2j,awqbc;WZJ6; eFBgJ`XbJ8H׏,īstPC	'흉`E
+k"=X%قkZ8tV5 S.')CCvIVSg܆ӭG9P-FխG?g5r߁dv^1<^MCE=B\[2]>01'`t]66 
+
+M]T]*7XN^Z|^%ՔIst+}	
+t楪5,$˳`btZ?2xXg^k!6#["^Ɣ10^X; 
+$').2.4!u%_`":ݴ4ˏ}*9:!i}m"W4BbI2گ+?gVWTfJūms8 dR<QM@3)ɹq=dUx7	8w{ғ5s	i5d^}d^D!<Rр
+f|_l]s3l D< y#}Ue=zͺ$\NW
+}~DB9\iDi3+yPv}߻/M|uw qV{QbЃ6"rz,bx{ch(PW_7UCbu2lW0φJ3b}ӥZ`wp@@a6M(2:ْ'-bv}##>wѨ:AV@3aQ醴awb'Ma-F.62zQ= 
+N%`j.I:`_0&崿= Ԏ`jRoÂ]G&I8;;F@@?V`vll8$		1h
+#W^/e0Lm	jW?6cI{t~w+~\MhyAsS=KEqQ=͂rX 'ܼJ3ܻ-Qpqggnqs
+7t:ARG
+mt:|.r~₿qkZ))[x9\e(F;:VEak.g<^ZqPS
+?`gOE/m 9ZW;a,jlt!菾k/M8R}[}Mo"[ZVf EV04 v˞"COVo4`(
+}֭5		gkg')0Z[MIhBʮ;I T^v*HL-,!Gd]yiˉdh7	~ϨCo
+xJkw|Aa/ws9C
+"(VD}lK8OWe	t=E5cm$^}Fh0m-TE.=zv-4@̍ESxG#uޖV,X2I.-|prB)=jz+1ʆдrƳ$R.Kk|`a@;IJҙB	)ES5 Y Ti>D0-eHXNdR:oa?,Eyxܟʳ}v~,WV1ٖӆ^k5:y3
+[4-whwb$h#j\c>z+*sbg$
+ xᅱ|:!j;AQ#1SoV7J)@>φvko \rkF\,k'	*.S;UH1Fhq*Ƥ{t-lL
+)Q.mwwji9НtPSi=eQ߷<Am_mm\v)v
+w7언37QDCܟ$Z+/F[dbkTKRЬ@`ݺ֧2Lkj+p hAMӡSb)fnyh57} ZYZ]1m32`Twh\u?G?\հ]Ƕ?^MK <GgK%+E$
+;(QKCjYGFo+OG{9wYd5
+93{Y|w)yF3Yy/`D_Dҙ,nI!HdZ(aܦU3~>uSbBPNIUǞ&flߨ e}vQIG3)Rd~ѥ$$8'#M-e`uw2!r05ܚ?sAL2#	2UcY,f~¹7+l""pTY7OPW9*X->j<3$2񪉘:˟@.׏RF?^ntT@vn({2cFKr"`2(8) s ]Dk"B8W*]	N6w8{my
+%}XE$Fy65`/D
+ =noY
+ƞ-Ps),'j/cJCEɇ[&O`m
+Bq+{d$b:>ԟY-fSs%K}e kx̩0IdF#8)XNV{lb2?&2٘77Oًj-}dɄ%e"T=h<~g)Ҁ _%#,j;J=: qz<ks
+JkYl"W?0jV0A*,~.Pi<{=?|o;'
+RE+:T;|^ecG4^gWqxUUġQvB,6
+Pf,aF1M!37o[x¢ht3\k-W_!Zv4:.z/nϳ1>
+OsVes}{F3XABk"?7pK	3+ˬɤ\8Jk;B_7&efi)ݞ\//hCrVWbwIRGH
+?Ā}' x`9981QU	G4`9k{W-Ȓ`ɬ) IFK:\}}p_i$ˇb.(S2] ,͹	o>sfT2ԲޥK_m-uDߒ>RVwjȚm]v$L
+NJiIi]+kP%7ZJ O:?5'eΛ\EMߘ"#ZHi?AԳCG9"#
+#"xi)ݟf;җMZF>G_?;;)C0x;"fLjK&Y0+q-S"Q'<_$_t+2
+
+! W+bEd=>{6}E$'˨G0H|-'4bjQW`:\6\{j
+`̀l];CE/z˙J7EZI%tD_zGNLaoyiJfg(9u=&QP~@ 1խC:KņO^
+L
+݀6&۱547Sf[g5D3Z3,J¨:
+1S6nday$}N 1K:6$GStPĦʅUwzO'bF?۔Rlf(,t/[w
+jRc;8 =/K#}M[CT~xKkN'꥔x
+J	V=~^fm`[Q
+Kcl@JΗQ7B梸l;2Zm	\<E3J83p͡Է^PWI	^uL|BGZ~(rKt/
+'_W0qn6Yc^$Zs&/w&!
+*גhDC07mnz]ǗHƚ&q:9ϢL^4}|;uj=vWC
+٥d~i2#R}v# ߋlZ|.5)ڔk
+OA}?caM4rRLq
+ƑÊcmэ\ʵvFSօ9NPFD`~D!Z[(/fQtG6#jE5w578â-y)0K`0%OV3 ;۞aW[gi͟*Бse8R@&_rʁ"#褧ϓs&%<¥^[Lo %iGwC/Ϝ>**8M$Sǚ9pSFea#=), 1f0*9# z-έ>a[ܒ\Ғqd#e^K}Yi4r⳩`|SOZNhyN[>/ߺSL*7pǏg#/'@NM_w?004\.Tg>@)V7 QGnҞM5NzDXhWVSt[oȧ_c9T)|:X'[q=>4}"fWXb˵ל3\
+~a>/A6J:m2Z&$RaSi{U:, T0qEś+%W;|Y_ᖓ/3+X+ȘX1*W{az*Yp$@2	xlF%=3r݈ W>I2E}$ӸkU,*@Q;Stm]ɧS^X02
+\{!:r;lEDE-d<7@zh;A7OQ.ŻR
+8OQb:7Z*&O4t4ipRb˦0evSC,xG8)
+Y$scgu@]YxщU1-2h')IA'Tkԟ"=9	M'u畩Цa's=[Qr0Cp!S4#avǃZ*E8[<|_nLe-( LLo'l+ZzXR tv^*z/e/<im|"r r&U*B#Շ$]0=7;?)|9jGop59×]'RntP0rWG	GE˭E!y$lPσ\b]I[U&aFy@&1	rBCj
+KJnu~2U{qw<q=TcSgˊEizNsFEy5ޫrRavʛחQZ
+)
+	.)n8@
+[ Pp^֠}i9T]oi[k1
+ }<LTdvUuM&0G
+58JFů9^B9Eu<R/Ai
+9%x[L<)[kUJ	']oYk蓼LoժGbӹXI^byr:gd8Ѩ"y9 ]l3:[jwAaUC[Ȟ):U؎
+TR8eF\#b"Ǣ榆p
+8T2mmNm C0+"E&a|A::
+ pՊ5HKy<]oK@)MDRu+OD*$z/># 
+>uKNڠ"~"z!L-HLđlϿ%B%cmT_KWckch>y;y6E-CeF|~D\j.	=C5[
+±$LR!gp+ԘD2JCV**iŇ؍о+"=e'Y>ѳ,_T ?h
+$o}fɟ+i	~MxV}c<GBqN'\?u^d)_zLq9&W#@:6$䬇&iJZik~Ö+_r*],6ts"W3R	EgȟaDU
+#4N S<'-V,]k)O[W:8<,'	î( zWCrֻ\&p5?#SA guk+DݜZev|UP(=tlP
+rĪԽ1VXgOq9σW!d2׵A|,bI7Ys
+o3{Wq)wpsCA ^U%dG]Ѹg	ȋ	Lϼ:l}w|0 X}ŤGzM"=o81y ҿȳ
+?%~2CLDU!*nn(?[xw?1'AdU
+
+^ojlxq>s&p ظP*C} U(b4N-%zIw'g)a%s$k!ڡ*.BFS@(S҂B]5Ԭ;9 W@Z{  [l*^*Me17}Q-Z|ݑzZ}Ν`A?>Vx&YFOhS|mVg)+<_4<sm73χNGlTRyGMQ=
+QJ8*rebݧtAN`a)19TzY~:;q/S
+	˳	J!ɞRC~#K_&膋i.{́忺3fJdf .Q7N R}F-R%km+	u6<ϖt\:H\@,N/sfUlH0&G*Z"랔fΣb&,I5x!5&@1;bjKbr$LE瓬NY4
+?^EiȐvg?Tv,&k"U5f5?]vN80;7pRoԒƞ?߻Ç@r|v~E[z>WVֆ9'naMl3ʏyvblqm"78E|浌yc3Z*'I֡aZW-vA0IB4CD_YM#~	c>hJ[9_lvY#9i$`[婟FQToX;	 r!_&4Ưmʕ2ro+eCVTبeisR8pM{g$54u	3YWW޴JD^Xrc_d0'^+KD
+,-nz'ʍNI]t׶e5ڗKƤGd+K	)zMW|jDOmw̿YMUf,)|?xW<(BR@V
+q0>Ǧ`/gv6.:.:vdjcCzrx",bU	񬳌uבi[eHd$ö_}TݸE	.%9-W:4C>M4W{IS8g25PUUH}\-GIzֻK̔Ѣ툛[Y/2ǩ&kxC~ ɞd:]]]%I$`
+`dkpޭrHs?dzBD(
+|d5^q2ɹ^I3Sq3Z ݡs6^ld`[`Ϩͯ!8lh 7"6&"ܔ̯uW].86^-a4_89S"nu݆шASՁңi^l]*.z#Չr#lViqn"*xX,Ĉk&u	d_;KI+]0|9>,< ڢ@>/ڎRTsP	j=sP8 `b/"h쓻,z]|D)RiJ"YT8W4*
+#jZƃP#:c;I)+$59u{8y{ekxdyŸ1q5({#ly15X5 [+1֒E]Y"h[sdI7#:P~B0IIRȓ5ISK1z&~fia!3x{8
+|+`9E
+?r(<k{ѶuUMp A'1#'L5>2>̀Ѩwn ݔc3o܏!(ws]?6}\A%DSghXneZ/Mj ƦkO5ۘ_:[^_\ms#g$kш催}Ŋ:<j_kifDnGԁ>hugeϏӝ
+h$llYzG_E~O'0m+Pcf=@k=%t
+x Lz^^KGG<}AWVb]Yjf4h%J]f@.>Tnbf<r,~] Y[sf~mzCu`wyO~,MM9ɫ'xF4ԻE7ZLf(r U^yOKS汰iy¨X &h*BG	NΣq
+!x`H&Jc&k ҙin(:Gks0)Ew4D]C˅q".,soEVc䙐WY "[1m]hw$͓Y
+0{wƪaRsD)i"* 0w?	\;&qW39XIJӑ9V"C)nD|$B>aȩl6Â "V;CeY`A*3ҡ~BA+,wT9R"*5
+e润Z%L1m쯟:xb
+*W_bSbUŖ[VѯkxčF2t 
+y*']#0^Xr_[9$Ę+XlYwγ:\MNVAYEDETO=b4jqe/ޮВ^*[+t#1N%Sk8%N.$4"bEAwmJcDgQϜ9Ϙ'5"|o~gɖ1[?SvNP}H_U
+UYjeVAҥ#XcmOڴwhw^қpƏ͊CW<3jC	w
+wwy;%w֩R|T>Y%X\?iU(əj5VCBO7( N/S"_:{pKQvZp9]A&|WDmxw&]	+@oC`T@aP{k*h5% CeƧa\e+bonTOn`%QK4TKqK+Gy,_W^⮰kFJVqFw^"Z%CӪi٦_DB2TPي%yBQYFY1Bal뗡 5aOPλk 行;EFXn1,j</My;)yC
+TQCJQn(UL_`==/Z&a-*讲8c4#U`C;,C4^PTm>ח*N`xtYFup:Vށ`;XE"z˪wtlehYbN;k!lgPi(VdLֶmV>A]iMީ 8~!iLB>Ɇ	<nz$3i;{?&A$;p[d)Ul;Bvʂ!<s$hӪ` C@N˨]c8Arko77~msJ_SP$R KVH|_<G	:3r6ݰo|ǤdpfR8y9q 9R(I+ܵ=y{t&Z܌a^m</B/	F;<aF65QPg4E<Qp*"g1.nDMՏw{>z}Y8UcvuF/YoE-ߌ?1V[FG,N0
+̎7[=bI5Ev<7%QjkI~,
+6YE?|*[Fre꓁7uuiR^L|e{mܺ Gō%
+PIM$h:7}fBchn`[l8es-4R])?WJ5<pT`2.ЊJ SlBrh©J:z$
+Vjt]vug-Ŧ/p+(F)֠ς=zr(zo#̴tO,8%PPn7KSDț3^2|[cM:'93mX9R{REՑoR?n?OO#De
+̃]C_'A3?^V?0HN[+?\79'HԠwC2<LF{Bf3u>*м0IҬ*sw# ÎuMv~&8=/rKqʸr=o/KYq% 
+k=XeR̻1H1nx!Ixht.A
+#`&5ǼhVY4͚a4
+fOz
+q$b7dy6lnd'EWS	S?#30ޏ
+1',>c<⚥aᘂL̺Z<WoWW;eB/?<rZڑ+-CQ@ʔ(r	${8ADf:=kh,9w6[s\kp>m>nT7m-<sC:l'i
+Q	Yh/R@uw͍~nso~5f$o97#̀KcivOUٰa ߵ.Wlq^D}˘Y'9E`5p]4]KuJGbu	җ}FÔ&\k_PXmf1^E@KFQX4zF>7o.!=?*5Y<T0uGzj̢l#{
+L1Ns,*wPHk]XtHX+Iҙg~0($5X"vۛ'3j>^:$Vz5z~ǈ㏫0K+}>}*M%pi"%FOXa젙˕@!󅵨C(Tu?{rF_U=8;kgifÑ<1gR%#8|mFl'}"aj&߲x4Ji=a4C'C:\7qcZzCMXqO >۫B`/m'tc;IM	FTVba (21	 zAΣ6X@
+lԿSzxMCm=Z>}V@WznE}$vZg?huF9ZطLC*t&ؔZ{OoӌËEc@qI."v6{ihtQV´_E79[yX9Z47]dQ6LY&hj= ȍxG4\ǵEG#cכ:&e@5cI
+1v+W5ڄ[-IB|j7D:/Ye(e3qNi	d_xu.՛Tͦ}{&pzvN5QDa	1{/	^}p/DZC!8>ŃTEƷe&`)DBno=۰&7ȸi,CH6*jq4Io#p[̋^5ՒYB{-6YOZEKƔRVvyr]q ڣ됺2} 9Pk¢9ק} n0G@$UP:@z) ^		Wg7
+g-H*Ld[3`1 oi\.0۶`|S!>u\1Ý΄N[0ᝣ$Ip=.wD
+<$51gfЋRcagѽ5+36"VR:G*s8$t[w9rBnn;D,* U:|Gl!JK]Ly!tnOe;͢^?̚yRDΥFF#ΈbcgJx~vYY'I+[;~COim#pgf69Z;Ќ³V)l5oYK!1Cȗ	'"g:(ՑNyn0Pˏ_" ]/doEY4i2YBr	= M)hCg!L7Uݮ LM1{''1_8
+8ȐJvM}2o.j*U-E
+nX5χ՗<pLrJY!o_g䢴@LOއ37{q񖸤,`EU?j.BB[if7C	<Z9lIRUћ\BwiY3֑pb7&]p,$H5ȏ3(5nUؚ&Ms9cܴWZK
+ؔi1Xa	Pl<<#GqJNo殐Jb偽daqp63gCJOB<#qEǊKxUV3/tK{@~Qcn鿔e[،=`Xfhiؙ5v1jRʪ70d箯g6nAmW5Ӟl2%AxAoR[L_Yv\T<AAO(ߓrshg.P]41LA>V[+:^#4%;jm6~_`KsL좥~zv/ڡ5;"	9q7}$OշMԔ.Tތ/GocS	`(eOxKE"T@丈
+lgnJ;;ثrKǕtNYD@ $J4jO4(̗Z(o2婢"Ԧp͇Saˠղ0{rhiԧ	vJqJg"-j Ƚb xV,	=iN{z~W͑p=`fqf<ps=˦678,,;¯O+l >>)ǘtJgSRQ1ȴMFEɊRP_kuw!Y`cZOEՊSP1atJGOhprxg,0Gܑ|-mt.|W)`.Ϡ#lEt\H-hg8L<	`*z~,-}:AU	֟e %1V@CsogcP6Cl$SJ5l6@z%4C*Ɨ"#PT ᖡڄKZ9_Li]mNhUWGNHY{64Gk!#"XIv4+@wɧr/[k&	YӷP͡g|&'?Dc WU<WaK'p.4`ϰsw@hcZ3zcqtѦb-f' 
+nUOm6RfSyJ,[FE޺['h(՞n qqoQCÆ]
+	
+gW"|,>ssX.m4,y(5܅-Y*B@4am.< 
+zXg|.^ˠQ~o
+p$82jLkK#\-O'LZu	L)VuCӱ!u/jܥEbU+PkSwLgr.3
+i#kգ-yQ:ILZ`y!~ʬzl|-m]}ÚR7[@;Ϡ0n,nV=]h{*Ƌi.Yk)U@\z
+>EQadD[8~ 0}
+K0;E}c}|z2,e]
+ >⿩ut+7^eUI9;^v9y8ƌ{-{ .FdBS/,I 1=oja
+Z	o8!ީ0l
+uKrx8#E\.ihՁ<Pm1$m@Oእ,XEⳍ7h!\T¨L2U4Oe6^8|w&?H@ܻLHJsW%?VEzaEkװ	gD]%ANށMߛh)iR|fJUuReHK*:<yۭ%i^]Gb2jDw,˞wW|H@CdpP<+)M1"t7OZ]2-Cvnx(Q2Gx*1z '!GTK9Nna'u
+Rlר$f;רgrڷp,o1+}]BP0Փu<#nt靶aIn9KSF!ye>Уd#lcS4ֿaWjEsQ:n
+jx:Uz/sey:
+)
+*TN_}-?qU>)
+9	Y]Hǒ^ˣD8Y)Ka06as?<Sl#KS+P̑cۢ0v:*c;!{ZBi?y;XWT3K#m4:
+ᲰA 'zI'(Rsq4\+JT1KMݪ!wju!2^C)Ze*\+X#1SX$McհiV$M?['N}O$8k7ȿP-7(3ʕӹgf2@4/7 Xvhٚm'*0ƴ2t
+~P"cĦ7|v/A^(wXWԔ!fRt.Y1[_NuZ/q{AI}jO09TZOG­JR^	ж*b@)y~TܴÈZYa=G9-_lT~{-ZT%~E<6 5)g4 ^L`3!1ڹƣ-Q	ջ
+W6ijHe!@9٘q[#9$?U7߬ކýϱn[f񳛶pY	ΣÈڢamS\G
+ӅA\`)_Gܹ^+U\'m\%h}4{4fj!!
+P{:chή9¶~X[n<3+G+*r/%cdԳk?i36C#Օ0L
+^?,s@t[ǖG؛&8""I(_%X'M>2UEu03tD%Z"y1gA,$r*qYh/w13}gxd))AZ-1Od= eM|B=DhUtgx3h{w/j9QIhHwbP{Dr(Tjdū/|DEdՆTb3քb&jX<d.Դ#fNJSClBm3mʄJIW> P3$^GTԂt^CQ961X<)HN|׉&l5!`
+;G9QGwH fvX]>t/3=pQdHfH}ؼّRva'2'u."`k4Kܶɗk=oYǒЖRA|LŞaAB6ym_G8
+LAM;:WB!k/}gG9Q )>9vh0Z{	sܨB!e ];νSPO
+򰮧tԞ<JLguZS2GQtf*V߈\Hϕ0!Bmst;% f@GlAT"^prĕrs_гÅ0eOMd'2-xLE< H<DӆTdeӣIQ?`&B(tvj
+ri
+Ho2R@_IP6|4=tsԲй؂94D39"K{$0(,bܔ
+QsLs!p#hsxpf?E6
+^)8|8\\eOh&YK
+-ֻ>źNe0fe٠
+.r!URx[1Sm4lACHh
+(P!X	(k_튫U
+jYiXLseme}6;i{& Thr2FW ̉	Im`s)Dly!$f4F>j45.w:T_CI  19a
+D$!ڐ^G-FƄ{We)GO'4Qx<mhа
+B,wv` yHBxܐ_fzYVfJ^߇fc/AcjzӘ9ʄb-)Sk&ɑ(م/QILImge&G3oN
+Vmݡ2-z$Wu7>[s_fKT\L?m2͚ȉis &OS3ZtGkyR"l+ap}@*srrk%KHH=Apg7`cI5uQܽnB.ltΔۆTEg8*.}ؑx*wXxM!ɂox&e'ĴH3R]% ?J]rlo_q|S2VIi)H"Nݬ$_70oZM2)¥Kp*h!;~R-mEU"4( ZgQLVU ĠZ徠cҹuq;qؕ7X`'+SmZ;N֞M=S@H&$MyD|].7q_Pthp*άĕ{2.Lܼ'-W&t${?׹)ati׊ ]9FϤN&/+|*eh	@C$Р\)QSӥ׍!˥MDyg\(xn3BSEu=]<P\jZ*Hs?-bjŅ;Djv44MA~7={tF/(5X[ˇBtHG*
+_bֲ3L.Zju2҈cmïa^d1)56P3x#
+I/m)DSҘt"v'q׽=Jq"b/pf5IJPtw׾X+&W]fm^a
+d20۲i,e(x^s _Od2.W`w\'7=7DW̞j7	#Qsi׏p?x|hGM+28TQ&Y!q4.9pz!b];)S5hq*;w@uEB>mw*ϛba~v<MTKF9eM5{t|'"*^]F\u1/:v&rU]Cw\N0RWE(~/ˊJޞFڞ@.G'	2㔍pngGx2>>&iɆ_	$`S#Yo[-U֥J+zK(}ͮ!0gspw
+G@]\t
+h]	.-Q#{2O/ױOą#HF13EJAO/UxGmQ܍ "R҈&eS^ސ?pa
+_0˿ht-B2=\VM^׻X*k7ꚯJq
+mr\!o=ԟj_
+/_sDXe
+9'Yʾnzvyf&̛-uW$(qqSop	)"7MyiCӭyݿT4U-<.
+X('Q=fPVo	ne	68ךA!$P]02`#ʩpt@Y׃Tli*$7c˷|q)jTNbÇ"ہ&
+*Nwޒڜd\NO
+k=hNLC(q?fEoLD;||VNC+d]B79| 9>Kn5"KE@ji	W:,ΉR$45fsC5&
+%sW^M-A,CbYgd[	ÇO4Ɖľ1
+#xٳ}XkkC>и1A߭LiL7S&&ξ`t7џ6@NHVm*o)wM$DF;Hd5	 5NF
+&pb)t`R
+@̓Hgc:
+ݍ_$3<[>1)DaN]`OCwg¥W-TpcR{esF1s	~O;	CJat<Dh3YvsMʴddтzZi%1]c69zg-qVf}?J	&9APS	Cj-?6gZؚ?Ԣܴ!PcW\cׅvj">[0|:nhxW}ј1҇;I]yZ+I_7FDz `ʧ9ZXv袨5ʚbP/$]rr657OQ#QIR>A'dU 퓥^ aM屔.O9mo2#L^nMl3g!2-m
+y{鵂DP{,,$AYf"uj&(Frt@c6{j5_hJi.KTfx{iWT)>gFGi-xE+cm{;3d˷@TtOjU2Rpf%[& یQ<+	xMKU^odDoyu-|Hb+:y3,^6Y\5!4mvl %KZ	BK_D$4R;2d9mGo: Ia(IMZ XT%wHk0vr.Sξ2
+kC^F$i+^iOt9Bm!\QK̖Lkm 0Bn%1wh+!Ü枴6aIl
+k!dRΩZݡSEN;hL<$Sג
+lgZ
+7e*O`QQQVWMTZhT8>YӦi>nަ^dX
+`LL^XUhc_9F>,j v/f8]m!Ju
+"&.	Ic]w+tIIp<Ps`0tF:!W|HwYn}p>1Ay
+xYo}|8	K9J2v[a,I_i1_P@R6شJ'1VV~ԺD޿I[wnI_2$C\8DUe(94Vg WЩ*<EI
+R(WP[`tY	B~Julsӻ&O`i
+)U8PG'1bzI
+W:vRQRb]9&bh)K3M{!a"ޔxIL_;L
+g
+vSQ/f>~ȳV%emD[MaoܞI[}۶DiQZX9c	GV\N5\K4$/0d@H| g8vj4H8d: Su`HlҶ5F~Q=L.C8 mS/Zx^`R^A/w$wX"5 `
+fMqhS>H¹ا<f2t fcv]zs 'f1U"NP ,$
+w#U栨{k
+:Բk*J>)A>3U\h|4 5Ov?63z0Yu9iC
+9c@34#k]'W	3 :p4"P3_ulXD
+bW6O
+?4*}˪i-8FK:-~y]+C5yQQk=@
+g1!<;9S|V/0s`6t`GVϑTsxU- >@-J%.t,j)at+f?rģ鋵ooqZJ@WQдaިw)(B)$ѧB X~vR!GV>=r51$tOzK$h/0JLΘ0^
+Qimqޗ1i,Ǣχw)_԰Ԃso+:O[%Ü
+1aZK6pOު2!4N+?T}~ؠr6e8^v'~)Sdx{ b&h[^v9/aXBjF9$bU;+ӯ[2t&vyk*G?FQ*.KkCZ:˱<I+P6PLȏx9-/|b~VL}ۿZ#ޤ;O]wͳ;}n msg~x}"G%
+$h8*_/ .
+)<+Z@7l0xC#x&0p|+ )Q;0C6Fm]`CF	[Y M:ިD90c]<:-omo_hq+͑N@;Iu[g׿͘3ZI'SVs1ʢCL7Oo"ؾgryq
+S}"$ȇvV|-D};RuzN2CElRw OsI8(5&2`v/aY"ݭ+	E0tNͨl-)$NZ]Uhʼn5[pP5ak^y@|k'rP"g9-]nA@~v@0B1]Q.M6^*,?[k/ H
+#p8 e\v*@UGE;zQiM-!>X@õ3&*&+Eqd&fz4	pPp>)󳣇$͊Oǫ;z:,H/LlFp>$'?y
+&o	ʶU#_Ziu>+1Lm 2dIq0u&XVzf[akz'*/`&dU%\i94;~^ ̽Fu+mj|7%2a^
+<A%ѳ.m u=nS0J*;٧߻2*]byJʕZtxj
+Jl0CSNzr`ւ)8]\R;U Mo!mBsc0h	os̙*泈hT;#|zcIqgPe&К*h^YO§!t2/eV0a<pM\!xOJBaAHzwarmI5wLކd{*ƣESv G
+fa[ڳױyV]
+lk>$GR`CMz	jb?h26}gqߊi!tݴ=beQ
+L.T5TF搒kX[5g݀D\CS}6|qHqgPp	`7m:l|4bmQ:FEiCYnic3Ntڌ= Tgp{Iw̽N=ZrpHqqu̔&<ٍv)Yf"n&5֤SѿCU1kՍ8	^F^
+xG<4MƟ^]	k"x.Ĩ{q=Ҵ6W wg?Jq ~SZwm$J.;k_APyk1E@H"$Д>:.&Ȑgl9XhWO";6܄<ӬȮ񡱔a^ST9dе	;ppnސ^]ɡnhО?9cL70;6C4zi~kSO˫ޅ>"R:11A-'ڻJ&]ׁ|Y*#Vca`	t,ZLUwXzFĿʮɎ]RVMׄ9I~4*
+iMݿWD& &b󉇉iՆrW&34\R7q m
+n6zʵ8GBY<PW6:e2|5ɑ ES @'*ܙ=Vkǅ`ahup,*Nk=j_?ח.nzLl<?uw
+mn5',9
+2m }9ߧl?vpsM\ny>x4O1?	.'p$~.oi8V)Bƍ
+xtD6
+*{U]d<{.B*SWR򰣠<ZC\ 2MX8$k0å
+BG0D0⺅B@bgz; ]5'wCS̃@(W3ۚϺNo--(2ʬ%[64C򇘷Eue2"g#"20YoZC2e(qlQTF!J
+W3XTլ5L,ZWL%{	Ν'A3Cꭼ]9 j?~>AA9nDƨ֓ō_Xwqksn.X"-Y\M:ʩ'4c۽Ăj};2yJRQ.nlq-+m\T5!hk)@DHB[
+s*c\'}pdp/(ɰjr[B64AF=Ar&V9%N!ӎvM`I/THf`YU {!3
+j~]HX
+};<YS
+XjW(po,&?@!7;bfJdi?ʴ?
+yNh>M;mg7c,!YXҋa.{s֐VG,4;]Db37zEo?,6zѰh6A;-Y,I}	
+1SY݂JQv
+
+΄@]]5n5hJ7(kձ( mF /͟a	}qɜүMN}.
+:3w<[)56-qA$f+~HQ"sZ~뗐86X"E9B0TڲԴ	3{HP6v}E':Zvv7>i"@voXlF&Mt[V1]ְXf>j8sP[]urɝJmE6Ìa,R1fN׈`Ԭ
+]*7ȐO[8߄;B\y̴%o2+3\7J}|W䑋&:V6V)J{2Ɓn
+:TǢ$E{Qb2/[ƨ;a=J Vv2uc=9 r_Rfm$jΞy{\?yP	Hn\$MLUT*AGy1*:1s&WzyHlɷ4\nFU2Nd"vWDQ4Vq;p6T2],ˢ-L=mz ٷ}\wJ"{X3uנ&\gh/؎?|7M&8;R"p&7Id/p#݂kJ)iO]{RW꩑UW؟&Y3Tb_x5ɀ-`-PrWz
+ hVj
+\6=q8O1tc\l3(ItkKbUz<Ojy;)Ĵn{g<3k:
+HsOh0ļsRqo˽@GG] Bpm~Ȱ*$9qu}B3-DtO,ŤRJGvF ;gW;`+͟y%c6&쮜^)EtHɡ6)h|_]ǽC$cv
+"Xʆ!Yֱ7Г-o.,(U^>0b%7v`(ޚFp]"}sw/q'q̾c}_ZD)7j^Aq}%QP
+Ǽ/M>k|QߎIԙBeݸ_Q5/S2"nX_6i$lࢥQr>;`[p&fK!u(@^CıJ\:_|Ũr7 XWܞcz{k8F>9Ҙi3<B|qlTB`OG4gu;ŝikߴ!T.%*vР
+l4iۭqoh[%P_$cbđK
+P^%ʘE	{.Sz|ܓU_<\LxrߛJn;ݻ
+%"LMʌ}Of3ƵInvijc䇽0$ϧ2c'AR<4vCW3CV<d	{TĐ3PVW^(lJZ?}U	*[~F̳h!ʀLW7Oxp :p< $RuIO;?p\zpn+ZAʒ}f8PX{>ֻMa
+7	JtnnOpN<%6b\yɹ$[t"Oob7K
+ָ|~JVuѰ2QK|ԾzMVN>gx=)w/Y C<`}2ԙbJWyT"MdFʡ}X&޲HZ8.a8hFa
+{,!An[2-roB76>i=0~'OZyK-l}}CW4WZ1u<0!*[Rm]C=\`יo
+OZ<&.hN<S	*N(|X-;_(~h$73ų-2@#+cK,B2yz̰c5Ec`=-WuֵV-x1{c?S;/(sKsfq4Tf|<kpyRpދ{x3Q&ǚkKfڊ]ƛM6,boiRGfHs){y
+G[#K}jY6UѺuÔnN{S7:]+8d+ˈlA%4YǘL/%,aZ~ݳZKnU)
+."N鵩^֢mRZ/WRzB{1uk|b,NϙDɷXd4J)ݯYp#*jOVxm,ANs9JRYW9$v	VݸfXuKk*a5S3}ȿ{3*XfO޴C
+;c|1VK -ZMLh9TWO~9 q`jX T/I4߃\RT`A|S4b1ƙFYz
+uO/}KVimxOt09<el.J\_AC8舃f*$N<A"m$Ⱊzً3\xve.x~Iײ	=2vIQ?e?%OK\rz<<hXTsLLʇ/l^ǆe$c>hosߕLR׬Ӣ c%I0I>)NGE;ҽ&;|FT?QXųFl&yxr	PS,BMg[UΞBw-6lS+8iOtK/dn{<؜9[k
+,Yj
+:#	kzl~EDd:F62z4i{8g?bVtpF. Mɫ"zϲ%lYo 3IQj.Q[l<8u% <-  mT#WPCU*nV2N^v4:9P443!5s! X#f} \/gUL|f0rޝiЭ'rd֕Unhs
+/ T)~0žL_ہUW0.z9	B+fFڗU䧰(c-JV)9hWElZ2nHYXjusI&%)HT	 bȿKXt]\|jĮ7 g~3Ɓ2W僦s+ΜtHd9  fY^(":~Zv=c$~źrәV+2+Y|qfx_|QE%4>J.LP{d	ٷM<:}cl۲'+1VS 2CCnPXL@3]GpD91e }@ƙrU2:gR!ߺi߁`+Y`!(9]9&k6MP@"T{4_+A>3zvL/Ͻ"d䃙XxTkr5A4_I
+^\e\2u*}}<neފM98N Xo4E5!֗UEA^xMW旹9mc[NM@Hb^<ƅ
+-+v |r҅[Uλ9  շeI[[_9)"S[0.vo*B7;c,l1qvVZuD
+Cԋ۴M_JBf+ sFW,D?lZb^8<RԦr<ѷQ|f^3N*-#byW?h-Mqn}I]wkEl/?ti-Ѣ/9ǖأW0i׌$oΒҢőRq'|$H4h0-AIvyq1g"iĽHص6B}bګWxVim)\ "cZ[Ƴ6iZ-ו&e&JيJsvqO d5=BpK}N:r1@sZQP8A?҈O+!Ŗ>kY4g>kS:6kp(%jg+5~Wڬ걘̿T=:\uQY(5$mrU#]dECxXնC0h {aq@#C0|3{<^3cBĽ"_ة@\5a,ah׳XE
+(y.R7^w8#JeкCdeH#zJjCsvFj߶!صNXӘ>z|<	}1\-/޺C_B zuG䎺` IΚIlݷ̓D,h*O^Q/}+=ΆtVg◸A}|Gܞ<gDnUt7T檦Ëݵc	}eӗYnEJް"Ʀ>^sDk{_dLI>ԉug)&8UD՗:ջ'ԑnhX
+AӳLXDn2Y:faŤˇȬVzs.qt'0I!34o{42M'vh!̂CŲ
+"x.GC	5^Gڍj112#@ɷe)iIZpFMHg!ITËnיY3+
+RH)P8>jt؈o"tmH'oڿ˧wm$еY$ޑPܪ~5vnFG};DX¯_mN@_Xdq=k\,14PU?vN@-_N ,_í #C& =39o{Z@'Cz5aHҍpY&
+Q2f3_^̀6ME=bV؀T=x:0:Dc<@:P
+u}]
+g	;E+9#Tc`l6N9)03#~u8?SL.	N@Ѯ䍴Ds3؛_83;dXzL*ˬWW6Yv)&XV9N\
+c֮Xo~}a@ŕ'MСbu$lFLf$͍u]-*}<vB+OO8o
+FԐZўɣP Hfϵ3"<::T&Ò5eQDNnZ7z5aTGFfXjuyBI_LʕU%}𭈝n;6vo3`%~ kp|Q(x>[R}EuhCR$[UO~՝*v&2vL1aCt(XSzׁ]>
+GҀBW䌓`GP JvYIjIX؊#YbtK\
+|IYXUew[bs|~}s8A ChؓM
+!2kbwşs,(TsZ6s+pC|H(
+ЈѐDfԱDIub2%@kOW6vH!*%2ŇJ3kMN?|׬FpMBW<[̨IEܠGP$
+BRր6	AHǭ}.APPT3a0rl4PyV\AT?2RJ6LY̢_/`Ash=?
+U	gޝ$eO(D+X[	ӺB*@%
+Gq"D-<J\.o!r
+=B?xCd
+/&@5u}T,TAUFa`WΈLgt6;k$.SOJINdMᵩL1.nPYy@\?-R4%)Ơ܃ʰhc4벞hu VR=*z7Yt(E8&7|/Ef'͸I꾹Qj(&0= %&Q/ k,?x:p}`EHU e(DiP	@y
+
+Kcn]T~VGה}jgA5_/a% Նzr~n:ʠ@|t "@Wa}Zĸvh:@J&ݡICwZIH3G)ڰ<Gپj3?ؘ'#=	s_FCC¾rm3mŸS<oDW<uqls|,K|Ώ<ٵ^lh%1FF/)b	ha_:XEp|@oȇF`T]P(6a
+3~O^l:ӎUN1R);$9rZ\]4zx?	;7M'iox3UFWm	j5%y+%1spVJ*KEYEQn)	nfBՍ$m4*n,0jwBߍfdǯw6  QSzJ0j1k|4!MpgS/B a>P|t@pp߈R:x}J +)A>?_# Av +4:NڂD 	kcMOb͖7S@F>q6+Am_9o
+F`$%h)qD1ØZ4qe'A7c&QG+Dr,"s0䙹m]|-&ӭ[a&?ں	yqXaHΙ߄ZPi:l ׭؛~>͂l?Z4VswONYus+ԭlEաzhQYB*F1
+(O~Lʗhk6|4/7N
+)+KıÔ]]r0pۤhM:P){{-MH
+k28Н&!9R|@tW{ϑTm°A\:n6c#h>ҨʮH-!r3p.@H]"XnӬ%
+
+H䭢	Ð)BbF.xZj6PP#f4N̫t)JO"(zbw=x/DA~gfl1{6Fe>M	&4ղq!;HRCbeUfB8Η5Dc56)`@~4%<_-<E ҽ<(p@\bΤYc0akr֕n
+"ӓmw[ibe# rEDV͜|nL/2&ujATE-F3{f2ngmcE1/"}0.iwWr1xEҐp2dI*r^G{Fd6
+rPd"4s'3 zWU3pLj֊,A]q҅nb޳3fg&Ie2?.fmYsd&~4|N1&;_5NOڪ{	Lݴo\L40Ge<;^
+|'j:p/庢42ӿÛu16DerEoNCޛK<?uL8b9먌4wy2=I׸0qBԘS0PmȒ&S4'!v9d#F4c2`lUz+>ܻ%wvCc4ģ_/I%)\#~4jt2,
+A(oZUuXq֛%:Jsʄ¬EIUwFn~gJzМ0/eb 
+1TwDTSH%}~0Z346 AS	P>9:_NS;P&VWaAQm6/9=NwAZ Dg;~k$lҥ-AF3EG,wD'BKyesvYc51і<kgȈ_.L=~mB,a#1axa:l~jh
+A\ZXG3i"%>ED.i4$|>v ".|hչGPϰt^
+-'?Im9;q;8 l(Y)+1~+Y5O"plZÝK`%i;ܖܜvp[VF.`ôla
+#V(Q"[ۜͮtݼڈ?Aq61BisR{1`|W3BFّLM)_!JF yf@IhBkwi-K'>f_%zg\?CϩXB}k8zCu*fzw~uƎӌ^4yO8Pb<;
+kjP>b>S3\bv剮MX,?qjzj_Zy\=_Fgu	MPVW&Nc-KlAJ<˶+Ղt}0}Z[ڐ,Q [g>.AuF#X0&U R[F}? !5H2b,Aeç4l>XgWt_.S't_#&g
+3%3F}2޼ۈ}yhXkV_ףl,]k-3:+)	By.ɤ__]:GҐ'no?ڭ#yM[ЪkUWܘ\~P(@S[|J㰳{\h)HrNߵsKTՁ9PgTT1eB%ո["-ərΨaq(T5ooc%s{/79bI6zrE۪E [==frK[!Q%ʚ@2r<`G ay˺t|Qt	9B`g>|0v¦1t+wu(~B8ga|/X/ayv{ii6D|-~Fhxm ziT!\Is2uG.)82޵sa~
+x잩4{{ZJbih9NCn#K]^I<5sʌ
+ݶ`Z*rC8ա3[/:)+1 t9kaQ]W
+3 6eWeߞ'H"q|_,)>W~Z6qaL|@#ӵ+PM%Dʠb"'uB;;)EwfCGL4.qz AzǨ|v{AGtkGb;yܓ#uZNwM$Yi/%w8wTvј"MrV,h:CO\:(K-jB]7nveiriZ`A9H'9 D>0`"I
+Acl6bPH#h&ۥƮ\k{9;";8⮃雅G~ZϛaJW87ڂ\_U@{6=Ҁgi4˙V,V]}2onzg@p
+pa'=2?FI&acS>\c^_<Tl	vxVc1vd	N-z\<qQ&rFḴceڣqa]!5y>& tBy2>2}7"߂bW4nwhlFө׻̟3xheȋqۆ_)m
+$)k "#Dl;y&0u[Hmiv1qh*sʖ,RrXʫ>(PT{g	72Y<i/2#
+1ʓ>{b`Vv'1%p]s&I\[+W/o5C-c 2c3r^GS5,H"q`_5tw9~64w[F.{M/xC_kYKc<$\P5rIgCݲ35WU:yYQX{s/P3$46PLf!?X0ue-']
+hm(WH	Jҫq敦<{ <nh5Xw-Yky*v$ώ`G;LAȓ͘vJ
+!N_ "N2*q,dqb(!rڶNϕG>˾
+$жK.5FvqXcD,DJ@9kTQ8W*!}DhYv 2`A1au~}a AC{ES!"ĥ/?ߒ	mSïD}^1) $S \v
+vs,t!Bz:FHg]RU. D;{J]z6,w񢃒oԯ&*/\ Щ|8 [9o%Vm/?/jۍ
+zwK,}b3% <+#ezFe|f)>7DPm)V {~mӴ8sS4LlqwpQmwܠG?ĩk<?A5cwp<W
+jWyb(:K65[`^{"w 9̛~
+F7RO8{N		*!K(2Y=	%9)]Ϫ8CT%3^"'XrȈ
+ȏkn
+z!(#Td0krl0,I%b6\3,(6.qK *)"BTo/dsl1vC'S<{NU;\ oo Z=e9Urpf.݊ok-+1!,5]k;
+m kY	 :"N!3Aq!WƔ?
++Y:1G0[9IlCn-ъ&s,J);ܘ]usŌOa=RD3\Bs<ͻY8axl+~>P -ʧmՈO4Iѭ7,+\O@i؄	h*)+7LЈU!=rxCDrϨ;{t|Q\p:	E.nfʘV)ձ
+iGEQg,9eh$g~Qiu	AYHq^y"}:h	z8!Oc>K.}v!7!y9'`Gv,3::8_zh(fFm_qŎf$;RV]#	T(Mj0UB2`^~?(iҷX%~4MD& =& MLSS6[7)[A22.*#Uo #凓FB\j8pqP	 zK(@T:Bm@O #Q*m}
+Ej]:0s݆FF$IY[H ;k)\h?
+=mwbei2) Gt}~њCu+	F> }V<^MaJRn_7ͩ	lV?D%}k8F.]E"ceTS;i$h4"._%;
+{B3uTݨ󡸛OF^ 8Fopy-PiPG?@<=\ȸEL(T3OJZ#Q=ZpȎ(Xzs) >" <JkVF.@
+&mJ^ٿ-zv$/ӰУTQkT[R*έ[__Y\.},GAPSg`&G5C_l%tk-186J9{}=(GؗyʺrP
+	yA
+gC)KmSao$n4yaBnTmPgʷ2^Q8N蓢xMGD&<SRiqnlYfu,9-7mkzT?p#/櫭^e#3^q|tb!P!UH53WnmؐkDt@ZM'SU17d:l3~2;?`T3Pȉ7s%:3DBT|U 9vHL8aORM`v(ƐJ;=POGk1iOE&ЩT|ԬoT'y`]xJ[{6ؖ] _&ʠXjOh|^`ud.B6ꀓ9X[Og;|j:D[g
+^T0
+?0D*XFLrM[Y<}eWڙ>qoeoƤl)Ϡt 
+>MLNX`#[iyr|{=Շ>uD񑒅O{bc~NT:@E	6Y`]/512]w2ti1[xj{>ˈ<(`SIMfsvhvs2tgp@ʌ*g2	b8f ԇZ:?Л)Gya_)@T"CU
+U3#j681ī'p/Gʫ ԁR%0ە%f!
+!]
+~zq	!+Qʼ:Ԍd'stbKu-PV#ʏP[k*OcW5v0D@M1t>,&8ßw
+LU0:pI<<W%XOsHh|Y{.$Qb:y]o\l=ߟBlR	!H-Nے0P}dGlg~v!yxh7U>>0/!"e6c8na	Ѷ#)3}5d@Uɬ2ޑR:8S`0wr5N?*F+O[־A|Q@0R۵굃m{),[{ib`q*w1$'Kz\/h֯U:3ԊĵUI!lß~1-mc/7WfYhGmV>ʉaid9 ;{Tbd#1	"	w9L	&L ju#+֓rqnN xv 4o3T{e8䅑fǉ	/pWVH |Q?)kX_%ϕsx_<NvɊ\꾟C؎
+w7)΄~ɲUe:SUTp_5%K(a7kspԳm䩚ݬzxJJimi`2X_oP;m7$EeƳwhbN맼xSFAT?{!wpA4eƹwX')P=U7rgݬ	nl5,K@nq1wc8Ju_:@V%r`,vv5
+궽cmheNW<M?1|e\|HDII73܇Vnfy_@+wKî,C-DXJh&/lh5(
+3<kghDe?P"U X4
+U~BrDC 3
+cht[ 
+"1u/b" !p)IخodB^tT;S~|U(Y\M>1 Sϖt9#YLdb o9ӄ9Ž9x&`&%Zlqd͋vY)N/ʺZ}FW)SDey j]vxx򬠱LeT0Ĉ-9C
+~z8@P
+ny!딫G(['<o=|?)+0ϼz>3Rg16!nT̌L80O{x}g?:S~={{|Z!ݬ=UO>7(uT1lO24m\	oH#i}nM(@f!ã<UF:#
+ME%4ja-	c=)fPDA_h9+|G
+Ƴ*T[=`"܍1@ r[)TC Uo빡hIV]MO~'7pG\z=gi2}^B1y)Qo2A_{61QG,Iوz
+f+aRwp\/Q-B7{Iƞ!XstRY% ,J6;WSH.SM]v{"=B_-ZhiCmR5!np?g&4?MU
+Cf4z_ >Fo~cjjUgUVM>=.>ܸdm@֡~S)) q5k7).FKrE&s7h' 2;8Cf"[0 _ʡn|@y@6Ϙv+1qF|FU 'SX\] Jњ=/s&0h8Y.O)CG@lO/Vq/Ěv+Do~ɶHjG쇃E
+ڄ[b}BqVQ3}0TL_l`O3C]p_?r$]yPm Bs(uY<U4yzCEf'D̖Z3K"3qS}*hv!Ulq#d?L,G' Y$U
+ϵ
+
+:7nS"V:+
+Msv8_.bN4,	X^^
+Qkƙ@7M<IOZ̐fWs2t};śȶ5eGܹ
+SN*8ޏ1_twRr݂+wuVI TlPMI~ɦ[SzÜuO3M	㾇qq2d؀[Cj{|k۹Jd
+'p5IbU)sS0 fշXDH&VR qmE].<8\j%Ҹ9֔,R4ӍKoK\Fe nj$ޛGLVjkBNqJ}Ъ*
+13ܸ4LzUv0/]q]`I?HzwkC|'Q3^yf#Mxfz}t2;-2ϏD"m[;)EG	|ω/u_+<VjG\'BL 
+u'ۃv70*_3MI'kwON3|)ei8n~enNg
+q/x3o 
+碼DiI׮ܗe|7Wt#ቺCQCmecVPyꏘAS&ȥQlBÌ>-[_EFtg7Gykƚ$my/ؖb	2@EP+ulu52Ԫ{1F(ՎH9i4X=pi@K&[>m%/k	<V$e%4vY
+=/m]LʨȪn#z\fǃq%z"Iiz'!LoVLD^*6<WAP-7ٌ--r)˹rv6+Igx:ޏ:gKs
+dO]ǎ"  OXU0t
+/k҆u !g@4۠jQbN$Z"z&	1NRP**l#2Ƈj+7dV>ę"98#;%S?hV>!?ßp1lY!K,AhIg
+ZK7-xf4ا6j/bxWNqTݫv41|S_;Dl0XxRY4x¹#p:-N=͠28Ac1qqjU(5dŞВ*[ԬR~~U 1jY$)d&Rm:(B؟:hU1a@/%m^7d7tQS*yJ^ߟ>'ޢhqJ%U2=ZwD+pSA3\GlД!.E0%(2~BB??8P7RezxR6Lr])#P4
+t)"onס6ТNENTg~PiQ1 -VJZyn|XfxdxcZOD^:j2m3~PX#\5^:Ū&ʟ\IEޅw25ِ;\o4rG IZU,).8ޥn^wgM˔3cbNB@67+ￎXvi)1'AK`809>f݌`wr7>ܸ,\^:ÃCMR{		tꍈS"O\ӔFjs4xS?7?)1e*>xǧ?;
+29\7oZ*	\ގ[4ۍjswd*^-{a9RO,
+Uc;̭b^;@aݽ1#{aŽ1T!j,
+NmD4wgI	G}AY3Cgaoz)\CeұalNF w̛Sf}#S]5XAXϹwGvƳh!)%řٿ搠Zr7ga]3Szgc㧍mRNȷ.!Vco;\xX"#a_HSK}p+:4j-Cu~+NgZLEaL7
+	l'l PXv05#K\?/ܓ
+y8ˎ[p1/u6S'fTkym!pX1ڮ/<.]nx'v^uyvp
+u{\GRL/	~MK=<LV0J<
+[c;<\AI-=Z-6ʺ.2v]mqrghA)I,˒kył.'
+w`Vhڕ$
+"fJ]٣~*$x߬g+A0=Ֆ]8sQ MJ/]B$mT4"|+_Ӛs=qmi1lΡb:l	3\ΧRxf<	ٵfb:4Eٳ6S(]m_\vl2AɰI \p`BAl,~V(y`=: RLgǖՍs.@͋!blS=Hc&V|#}!ZLo۟m{xyIʤR+X1"2Cls&ebtsqO=[kj'mYQ) SG3D{A͂O:⻼piyrJ팲JD4s,[7f
+p᜿V<<NlA0oRʛb$Uy/~q}ؕ<++>-鿆ƞӃa\w#7Z8>Ѱ'Ç7VPg#`.=7|}%]c7"gRYZpeM)+@+|b<>l+_1cכgN\񊈛9k$e#O)!3pS2)vIb.JP Np\͛&j%\|
+B%.C>P2Ϗt5NW?64@ɽc禮IpC</&ͅtJ)ꆸ[qqiTX_\:Vq,	zY19Tb^`lkBDP>:*~Y XH=O%mf_Z"Gr#K;J.ztB˼DĈҮ6e-[8)+y%=u?pZ}Z*
+G;܌8H	DuObT0f8vķRR9n;ⶾP=Ia5~>,
+)nX
+,MeSĊ9ބM2`nn
+C&THJfI(#ƺnx1
+Bp@rs[ Q w_O>dt(x##ϲ=CGgw/m a*dytpbmzRp}-pHAFпEٍvMx1113ř^r)~}=ycu?K=VڍϖILYY?oC߄:E-6HHui58&V;/1HLK7 "g4
+ Bpxq4HoV7N~k&#H֬IG<qi[w>wZvڛq!s-n-,Q5d]Il;Gȓ.]g9HoS2S4`^3+XʒJBWC7ʣPe;>iN"9e
+ }LX8tj=6Sńh~2>I1x,-ف33]~oQ'~,6wk5j%`2&h2yPf}NGuuT:1/n?ka@Āڧ`ivb<NOn}3X)X]*p`&՞|TZ)к5>zgO~Uj>w-]*wβ2ֺNlPxmNgX O?+|i*%L3j̡L!E_
+'@pV}̩mU}NTDg Ѱ:9YM}2#ck~<$@Tc\ْ%'Ў%sמXFIV@FG1}*,&cRɵK^$\j1^lF
+z
+x55;/W&vOyy1}^b*:~+P~e^8I(Ȗl>&㽚]2ʸ`~3ڮqk<66ͮo7].S걏%ɍ^eb=dOv-~8	5nbPc9aԀ-A=j+|
+H oU-BeRޙ)o~e?V*Ăh œuF?h)7DAă䎔kO:N*
+%AYWΟQֳhD"Y8qX iWӥֹ%:V17@U9д߻aGV,X4dl񯯍39=wX70?3<~%͢,!1-0wPЯ%>t`ܺ
+
+ d7kLwn*y\`W
+޺oKjpCj@8<ri<Mӝ
+Dfs#kN-]҆a8HrolP)VF`:]#o~P*L,>c^="g-D
+v]a=t G-қxeCCm,ouk֘q<5QAja)}ОJ|{[g)PLRQH
+nʱˑ5v߮]CBo֧@'8Z6N˓Qɔ0
+(`ڹMOA0Cy|jT;e|f	>n`(~ٜ>n#D3W"4]\+DSltx4wp=Lq«ĸErVc_ bKZ|}S$'nl5Nf)}Of5'U,h(U@z(sV;fW(?W]6⶧,9V6 WpEX4Xi~Ӂ`P}
+brBh(@JMgYy{{#
+ pߎS~s,jqOYQ|;'Ŋ|$**T޽-{dܓ# gSbN#e_IsRNTYxj/%{|bvwLsUw VJ<2Ev1]:Յ,
+:"0-!Ԭ:Vze񥾃{:*Ӟ=7Xv>z7hyW$T+MUA^f_!~S5Itv=;e[:;i>PGf`=DM+7A#P4~o~~x獵:(c4dl8?df<Q|YnuPtJd{LWeiR-yM2WKuTaٯ
+:
+2Mc@^?2ɩ]V5l<7"()޳$[lxr4oc҇]\@_G
+.T.(\О-,Zhǥvil:BpЋlZ-ŧ~efjqpJ91JIh\Q#C?k^`PX4pSVy
+ٍ; mF'arW,	n
+Wq*sbP--)X!>M1
+.$u+Sf 1uVso:$s|pbѻ	gیswc@7]:&*$|sImM1td>g$ow%TK4wNT03e[S$wה*g6kcke:ӗ[b'_V`4ADi$,O2Y@ݞ|A1I-'"&9!|'+~vko̲EI	g2PNxT//pOݯm<G3Kb8,jRxîh;,bcڟWׇFju]҇bkLhK:w^rC{g,Fy괜.YN㢧HKꉕ~{^08oOs)M*ELw0__԰N6A&L,=*%*9VM..X؍FxF. lys_j;tdpajn,x9qRGfo ,d. y%%#"qS W>A%`:̟gp٨,шF$@([u"ŀ 
+J ~(DjG-li7oN,ףGE3~/ ArxR4%Y2i>ڦ{T4ˬn@7x҅~Lfw6TM̞|wЭ.R0|XGpnJ*g\zIBuaXҫlij_M&eh_,E)(ɓZ0K)ٿ]sM~cNaY\#%Wy36$ƌy֯íy&W]CTm]v ԫ1$56;mx^\J14)v}T5!`x=t?kH%`@4Tבim%@О^Ki5[o1ː?Yғɵтf-
+Vɫ9XIV'#a8,z~æ_fΐ	#
+p/GCgIp%P9	~a!yd2O,DqC/?b1	!\2N;L-N%FlG]\
+ 5
+:T1\݊=8Q;H  M(1Urmg3$)^7O|],AvчJn_'ߔ\T%1VÜìd%cV:aQn caźȻf1*.\iu9oNar^%[?i'kԆ]V|M#9%N)H%R>DEo:#-YGWŞ̘,/Mr
++CvG˓k;,ʲbL>vLZS<@c1-ZX*$Rrk\=<mg's}&hʀVWM՞E(ЏR&~SN],sJ㺘Щ
+;wk\4pu;>!}[SO#vR8//ho44^[
+8o
+% 	A(>mRND3<hә) GH~`hS5&CT^T=Yͯ~Mޤ|>> :F;5U2E#<[)į蓳ϰW'- Ys{/46kXxڒE}8zoωEښGYP{F?c$
+ZWz OY~\q9cFf4(1#
+U	QU0a$r㔻<09Mɕ<H#|ecxYc&\MRbY
+!ԖxaKlrXY})0w!x2jg-eL^&ymyoPKR?Ezm&@|t(b:v' d'ȫC6>rr
+|tLA?{ūM"DYvK "Gp
+??VI*J53wf+ESVL <7d'78>
+mrYO"Nq%Cι#O'ى2C
+{/ϊLoZ,|dp<+xxу1Gr{Rj-"4Y&c<sWYٓm[271F\#.We[9M3ws_lr}.'7PgkFqGU| ێ{83蠰ʨh_1Y{לɮ}=50Azs)Ugv?@\F_#y\քJ'\ԣEYQT$!%u\klq""'a^ʋsزv L?/,fB6yss3Ipmp.࡯ܲMޘD
+UA}^)W
+W	o'YXt7@9IAZ#|hҿ|ۖ*Nw/D
+ݚ.04'	R,Iy&G_Y\LH{8;;EW+ә|ƣ&6Ut'߉q}{3.gz-G~_ldRQOFr¹챛YGgES"hwܲ\WҪ߯i؉Cgx޻v_uFSh}eU;_.6aAe%dըI#zJxcIRL	إP*J9ZSվ>.}YQD4S뮓Q	X)74ݫ~ܿ#\>iU(Ƴ]Bf-nORBC!l?9EaZvXx #F¾0vu)R~!|'-y3~sq [UDɸH^:Im <6bs8\8͵8To&0ȷ<E<`6Հ'(}Qp:yX$S%lo!9gc9sH+\gs_rUߜDު?Zj+,/šN
+B&WYH&B&xطRb:Je>3TOZ#CNUԳƮN,_]We'mR'jkzmEזDCJ6}2z^!6ݱ/jNdF05J2.[ʶtqH>#$<7(rh
+K>WױEk8[h	nm-#	ֿtU]b.6{tr=k4j2(񰛷~2nu6"F<}$9osXYsvCE+76	V$	I\la<TANH?[O'i4nڈAZ]44뚙ed~>+S)יuLcOITUO1n]MVvagDKȓ-w8{dv\sDt=-]Ο#y.~߉_RH~bNCEF7S)a|N-^0[5{DhQXY3H̳vgh])2үIS7<E+əMVQQAHf#>ʐG[*TqNPL"ðhcmBQ,CALy#* MH}$LYQ`wK"Luڐ{C't\6^EFlTEGw#'5ly3ZK0r`s7WȔ[JR6fVa)eQV
+#\%8o'L1>mnr8#F7k{1Uj܀Gɀ\o
+T>̣_?W$_!N{Im}DEDfl
+1F153G+%&Yid[VGYxJ)33-#
+\{>W͊X=y˲eyi4p I3]ęxW"ߧUHK9r޽@K.c=~>>̴M(-.8#n4]m+. f
+r٥GTs	+1BC.S!{TR[}{:Ry]*͟Ӳ'r\A=Rh~K'}Zʏ0C|Cf3W5F{F	qeC ٴvE~"
+01bFi1.*JC59#uXB}(N=elnܟ+⇔Mf520<E$^gSofgΐ"'8DW
+ r=U*~ږ);D&t>pJb [<XO׻Ke3CE3 x+=Π6xv	I ?Np@RA 6t>+¿ͣ3OFnon89U5J	BJ|0a6ϑSE3`A+4U>7e_g#w.-z k}\߂J50&Qė'fo߆BeMTVPuXa'zzU솸5 42?Hk?gy#&E6<\cT0p/T)+1ʓv>QHDFYhpC|̟UP=Tn6hWVNw$ȡSp=X8Fb>wyY.ml7V7]c5tBeu{lc톗fEj㈻q+eoE1&E%|̒YStI_B(0b}
+fKr&!v*cdIV$;pkؿɳ,={u8z`q0ʭ'+O~>HHYVo	z%涳/%m%ҊܺK#UfNҙ6|˓μ:e,BYAa~^O,/Qzy"
+1]>=T(`h3
+bG"qc6i	oM
+
+Nb٦qjj=P rU.ئ"m("]r784T?edBtk}Hup7{
+gߌ5_h(j OzNB!@6~)a8b{lsvƑ}И7alɡ<PXRP*I|8{E9E^07N! $ڶ6m3J5f26bS	j%Z̃f(':cS	Sj)
+U|aKCʀ_C,a9~`rm- BW~56M[r5rofxA~ %<8f 7<: 6-bg 1^hqA7~gJ7/ǫ~PW<Ig͇*^Ey~GE5j,Egu,lcЍ)}As&I<X\Vk2[ٯr%P+}'%<nxuM0"?DsOw3DVNaC7jUUdVl6qJ^T'P:>`21AbL<pK	9Al|CjJW`dmݼr?ϻ Foxp$z
+l\3_:"-<
+	#p?vg̢tB{P.1X<9r%'9r#,c})M!4k1)+ 	*h+lʾ0HzNخ|T"m [w iAI|~
+$s[ؒC4U^Jj%uM#H-͈&V<.s΁)78Pa1kIa#bVko
+k4/oPhb*oT
+.Cz5a"*W$[YNYs+TԔLgSdtZ[2h4
+">rB=*7H+,nJ#oaĜ~L</r_nxb],h߇Ђ#1{/`0DY'zEIM 6@N5e6pKm@٣mVE)yVPU9A}VI10w,O%
+.m33rυjKv+]a۔Bc/-+sM*HEr'[߆iOWF&m1~ŷ8H^1&P@Ja' m-+#G+~"ŰTO#I[o@H鞍>zB0:<)?Zzj8
+Z]&-̒xC]n'k4
+ݶiⰑikiy>e8؜{x'W7,TPHmoaݛ$rB'm8
+I&7L|J,-wG;_:8bis6{T#dX%d3;Y诞2*3V˘,S-4X*Mp$ xPKb!J6UW!۳`*T3X_5"P Y>U2{K{߼mL$$lρkR
+w$+nz%.@cN<%<qG?՚&7Sj~~J>D:w
+:}Tdb=::)!Gt
+zz>a8{qK
+ԬՍ(c4&;Gol:NwJ<A?]6QYZuW l<xp,zx
+H\.9Z<dYoq5
+?[l/v\~;BnKz3#L4)Lr}S4@
+O8˯#=TL<x;8)dg_dL%)͔; m!VyMKJZmT9Е6X2+{xꦲΣFկF^\`o@|*@?{޻fr&ڠ0OVVnJ;p~aU(r܂ ~EuJ؏G3J @g
+J>a_%=}Ȟh?}[m|8|+%}:Ut-ˏc-z
++KkFU5'VxU+%񡇴{v!Ju/Xjv#}W{1.3жV5f-Up {BY?9|B1*Yun#7S^.7	+@gu]lڌɐ%f$2Ӥv)
+bƲZrxW* c#qC+ʴgX}i~qBp㇐,͒$C{Ƚ	ZH~ݱRÚL\V6b
+ˋ	՗OhH߮Mfx NChu\mߗ
+Jp͖+E}K5zAmkfc=.D2&
+QbCAc?6%l}ˇ~&ۤ/ZyqThNr`|KA#La+6"ĬAB8V$qQ:%W
+W+wҧb_j;.@
+Ba'^<~d9MkS3{0"覴) LDqʨ,խ75ibe.x{n[J=/{zP̚ݷgUʖw鵦5 6.xRw`t#p悧F
+d9友[&s6dDdD8]EXf..(Rp?7Jy6dUƆ~᧣8hz#7iIFPBZr׏q٧;Xb!1p{0M)v80`[p?ZN<@GN}YzryKW= FGbCG&/UazkhZ<pLD/P#~Y,۞ܩ'$a0'h JCYhAaRNmG7$%kCaӓ~jҲV2\a%WҏSݛcCmPRÂ&[TThHFT}\xz;#QF1oAAٷPL[O)E=$+~θsT^&}]=MgU
+-=¼[34:-̳b׻Ops\ʽ!us
+0c*ThM;J
+TCE.i^
+/!j#;ݵM@\AinN#25ʷ$ٽ;$5_ q5;7}94/es%0n`OriY""BoI"$6vDۼ"w'yü{udעl'"\ud,F
+6	Nc;k-R,	YfW1XËVu.Tmj{OAϏ	+|AGo,h>%:OͻL7P@Bۘ;K
+"Xe64wir#j(h\BcbdHrnjhcnRXvC ʎROPol}}}u'K򢯁Ɯ;8u^)U9@k:: yl	&iBǌZJ_Ix+[} +1AR3#A粛BКm1B%5lݫMn
+RB_m
+wº}XV=x}:鍞MaTݟ6~4I}^&](_, dVuKV5ZC8P7?n%~+"*ȯEZ*~%Z
+j_,|CIETcT
+	{b\מ20=7[dMa/O=_D-xM-ӓkլTE'BKڐV2qn^͢-\e1vS/[fIzi׎^#A3Ze$rԴ)i=t|5
+}	Y<Kt}Y~KmuIp$8QD2͙]ps7)޵.=GdC
+&>8
+H~g#5f~ ih,
+i#f݅D}$!AB'`v8QSI#
+KdSbT&r8m½
+vE^Nw}|?59<ub.&@TN-~y'bMV9G-V'utg/ɚJB%CўXꟂ:bg胍v:2_	c	w:Jd@.;Taʜ~0
+os1|u'H+qAr5,_UL6 G`{z8CVGdL{^	P:31|^Y#XߋEYyő46?4lHM0-ϰGSlT?!++&(c<#AKjδ"?8&7:L(`ʒOcu vOFY=᫝-nDm[(	&Ʒf/ڍŔ򊟉!(~= Қe1uۉx=̝BkՂ`b9ZtC'q-][Yk α:$q2j)XoB6IKttg`
+:c%4 #}
+<l^Os23"[gSQ[TPd{4׳~.7}&xYpGO^gVrE4yiV2(Vndv!ڦƦ54P%-҈yk0qa-0|{3_E=wW 5*z"oiǉ@!sNCA5XGp8>
+2s<5U&z^EY9,XcW&$-#~LrҊ&"HoT<^0q>5GpkU/E+cC=Έ{P?IڬfH.>0HH#k1#uW:[Xn^!1ʀGyDrVyeOC-o$}`U~@2:h8tSZ+@_c@ݕoɏk7A]7}bBiG>#O
+=1|D\&/$36jAO^.G lP+o-oT7'
+ZqMX9s_zvAJRo~bG5}u:TTv kMFP[_uc_[W^&U#I	>^G}#8b)׋.ijeQ~aW;of,acwFƗJM`ضEqrI?_\)&:,XP6ʾk3"V63jˤ'P/fy7FI#PHg-b2:ujͿٚK#5ɐ0ib@qQb^Nrxw\ƴndF+7QJ`7'OdeQ,o5DK*Dl(v'PcYp54BR@rgb0;$t7ڇ,}AnY
+\n+!Wp@.44j<Ӥ}%MAD!627wASd{_
+^Q6<[i ^$cpTojyrɧϺE4T.(۔MP/1w,8πQ$/TJ:G+z>U[[
+YRBf;LE&x \Y^S(0hsug4x{$D-x19[kȦݗA[;Q&pU-GtYTMVt>KzݶNMakv4QQ[LX#,
+{vT6
+`gٗ;+?Iϋ+?sq.JJ R#0(/ b| SkX:Zq/'(L}:L@较yAO%/IަYqIp=Y[ Aa'O?kuW%Mݧz3wG҉[l
+M{;Q≆Nʛ%'6WL6IM>0BOxW)uc
+τ4$mhiVhY{Oe֛4fz_G ܕ8\Q]2S3
+(MYtG2&F|t.Q/	WK|>K)'% 򖁚tf3]cѳv\݉>2HXmG.@ԍ?s"+DDJ2M7_Zdlk#]rHC9 NzS83QkDTILs;m
+"O}x1
+Տ5K13 mo2<N1p
+n򸋺1H~>FY0JO;x
+alr%=zD8qsqYnkPr%n{|ƹ6XܖkQN=UrEz_t֓)Q%m2y GA5t7|IRe9銂Bjۨ,9c*c?F.0P۱Wr7Nٞin;8(Ef˸9cϲ ]3BF@_B$2#	y|"~|"}u0 Njk!CB^;3_vǭUqyC'RؑUE>G$":n2
+3[,޼>qLت>Er!7S[tm[ke1LyY]]{7[ofQċ.;/48Uryѣ߱M-DYق7IzWKb>F|dD'WZYT2%G|,=B5GYSJjutį#;	\~BM:j
+th@a}ۢ7/&{Y rvUw`&0돉}kLUO<c*/;麗F\9.궝XMr9Ю pPӶԴ4-'F^_4Ek)߂xK*Qw:d%2>03JcE-{;@B=mRTXr({rj[ڿG#g
+NŴ-r^w93Z)\߲m+6k3P?!}b=0:1>,c%)ojR˱;Qjtͱ%|ȡ3	"*siςmjyvp5NxUF4B$gYi'Q'踩e5ut|(\[4!2J+i-~E>m>8om݉z*:^->( C=`5XLqT~#9Cvw_;YҢ_)?L,J( ;ڵdP`Nēnn6RzfWsah`w_^bkBilVPtw o 9M~=kCTXzZdDe8'	z$0r5aXƠ~9l2KAToA <2_PCRiKܢ&$}pOO_{Sw# "EoU #RF<CE+qZ*rmpfrLSZ!jC֊m	@0񋀚kc|qߔC\jZz֐]]kkKBҼJ*<:@E+'ZXT
+m[" !bX֛w8+๹ckAoW[pRlSܠpۢߴU_	Zg$-{|kz{氶`Ϊ{13[g
+(u4'曶˺ؠ>\7M{xn[>/.si8
+CΥ<Kc=7	tx+zPd	hFz˻vB<.,YCn8vӕÔO}ɕm/rHBI'6޸O.SErtޡhaA_נr>,+Ɋ kH9hҰY@R*D7q՜fW<0⧛֙Շ߻G6
+pQNw#8^kRI˦.]
+V
+f7M)`WvNkmUeWRxí~TtM$@ڀ'duzۧ뱲X#vq
+Y{5+Q={5n?yJ%I,VA	<KD_3*~3B\)1$XjV5dj:yf!K$9KӖQJ{gBky dy.)O$-XD}QV6	BеYU~tjݵ'И+We"Dc^ߡxhEtzV۴?ĲϐIbÐۯ/bĦDcdj1j̴Gy=ѓeLoBÜ-%iƕ9-Y(些s͎eN&PsvĸV;
+JS}jhӆFtܯ(nHH FN3&unQ\RIoJO+uZt~U~
+l$qfhBe&S!#2rЯ=^]TNuׇw/&BҚAP'7^DŶI-qIH{
+ƞx Pϓ"ur1)/w-F0R* Shyh#ˠ<%4@k4u=5}Tj]7jLӮ4|Z. XQtﲧN6	{|?ErN(fq3O4"3\F9VR7c4qzAtVShHp[:$zaZqsJ&Z0cmOcfd >j1B;x}_Z~Zg6΃AUŐND4ǰ,E戫D/?dp}bPtpv{B  /uL<*eS}z$15.+rD;W͞.8Jc&zWZ#$}#瞧3]bJR
+1bAN h:=i8q]:h/20\V'NoZx3H3g/[CBm;/"%8Ӹ:gSӃ	_
+<:dK#Znϳ7Hx sdm@G
+#.~8=( wݽJ+ڨҋ&mmtcmL:i
+Ez?ř!(0tu# r8<uǶVޜS|nJ,_jP
+vXm[dߣmg(q "${H}E
+d|v19y>\1_mOPsoVqb5EcnswOu)[A; n;v 0-[R"5M	cQe|N#x9
+HS]U6nc̦b\Imd%(|wjYVB-ҭi!+pv0u95ŕǙ;$Ϳ!?r=B E}!VZo"=2U1&
+Ⱦ8/zb:X|N@>@g$.jDS$YyEwUW|05Y˗k>)ܹlyx9G9<#``
+Al&4 B`^m`D52kؗ-⨆D.D+77Odq!՟ܤuz`eV,{b>K17rA'^Y0r@&@z'at.nBY޳^@ǵa܋U$/
+kw#ƔjMwv7ZAcZzP	Rټ4RFp<AՁ:Nnl.5VEЧW5'$lMs
+!L-rA
+=o"u%
+GR~cev'bEكD6F;WB7PĹ{Lឧ7"ꭽ0;"+#4
+ظ}<<Rn\z۠{`*_hO[td~~l!Df󰱃iۑ$p6!B;{/Ʒ
+Sb9ؑ`^dUrGQbd\*!_\ix5@Y|3$LEZb*Z5=[,45o2ٝ8J 37Jk-$4&a+]d*E2 7?dxJIK16ر=s`ў: 
+Kspk}->}́%aq^)\,!L@,dFO G5
+lʏ5Z$p	a-
+k2-U[-99OP!i?}BIQ0jɤn6vcad"!";TdP2OY 虺p2tKNΛH>t^(AM#A	Tkśm-6kQ#:K总lPcɜk8&V
+@r]T՞<R	< sBOa>A@\1vȺN+'ިlTA+ <1+nXrSUqLg#?:B!+(9*8;GOKQ'D㍝ shrmvط=wP$x'n~;9r8nE
+ḷ4DY=&mTA_\3]I'l*2Ysao˥1Z1`Tѣvpw)%.>cK ob_KɾPSKJ$ټ٬ci6O5	ghmZF㵄 ЍV1bhsB}϶*D;䤁S2pb'[LA
+{ͿQԪ2B*+heo WYB{&o=}RA[%=7SS=EB@WHV'aA+L$sA@YGc͛T0uA>{*ɐ_vs늙AR0*D #ńlPp(y\OG6'̙hz
+]~AygiKsЬTÑA0]+2aZ$:+0*B~ʆI[z8PPQ&<!\QBZ֌!!ܸe+*s<u6O!cS`l#?Qt7FE`UI
+q0R{$e=zM;Tݖg7.:$bsA~UXc򺳀κORЧڀS!@g
+E6[3ĕj[y;F<<K-u2+H] px"gDRXRw.EI2; ^_T:-GO̶1CL6%>>ECT?<FT%ٺvsH$fHy
+p-М<0s`u#m~;I2nլNsp(=-\H =	wWJGa}9־=.E:&X5B 
+t*d^ŷ" 
+'_^AR_ۙ
+PKN	Gw8BHt74z;3՞Xq5m}d|I+^;dǼ65L֭c0e5hA@'ǻkW阚.(	rJfH*f͢!qB׵k{MEdX$,[T* ֎'aJ&v)MûXqrbÐ8ZjvjUx4Cr^`s
+P4iJ7@Ҳܧ:EJeBH`}vR>+,|bRw,uFHy~8zXYh^SM;0
+a`ɫwu*!lc*`d%DVqbihGKdU.Bl[t$B
+[
+o&eY Md_8k.[&ʹRcL5	P [}YxS-PQ!P8p7É7 ieCw'wk](aMΖwb#(_p^h^Xiu\}`em[Br2qU-?JHbzƼi)l&هNZ疱Q7폾88-(&v
+bLa^3w^TJW-(d}pzra|xi-Vd6`h%odF[sN^KevH-CV&?["|@A)gQM8z*zThr4H~..h@ ۰(G
+xpIօ:r@V9bƲZjЀL`rhx@_Yf9NNka? Kʎf4 *R3u֍4UƐ;NkXFc<҂I6ŭňs)8Oػ0 =~;v`t!)")FnNl.!2\0ەf5(-&WbFl>L`9J(aYQa]+g1ÚhPp~ȅp4h83@07L-IDz?`1+o*.EJwP8^E;W$Iч*lH$@:u==L{ {ir\U,Feೠ4#/OG fn`⳺6(HxGMrQƕ]jkTܿ_*YTpEԷ9~tPհ1E3VMYKwsԑ^r(݈Zuft0J
+4w3)Y'(8ryD)eBr-ɠꞭp&3LW/ekcC^an
+5UQ_f6>k sơ"P&6VtAn&BR/'/AA1z`6<J1I4FiV
+=Sm29&fsOKwvޞ2j.3|0u Z<8N7PN|QH_@B3p	/Ӷnd3fJSn0i3)g.$%A $ Bm8{h&1d~yDDBA5bɫ uYʠާsl f|!2gd^N"g%яxU|O& %<;}
+]%\$0˕;q.@+ZJ?Lټsr,o_\=3
+:UM}b5_Ӫ6Ww"!p؎"}_ΤP9S%fvȮHiQcQFGޕcfx6'̲8DbyhЎ%D[!V/̩s{vHT5-EW~c{t[-te}.
+aHt^ϛ攼Ecc1y){uɋ<76Lɪ	bO
+Hw"²LdmW.4feW@UIcnm	)4\ԮVk@gtj,PeauXaɼHdSܛRf\ͣiH}[k:~nrŪ9}, ]LȉC8 r gg)&H699i4KƁJH=,dFJ8=>~檑ha-5(&A
+S/;=[7qٱ_Mp7\)R0/|CuDIݭ1ңP:@'ҋ%?!޿T
+}$$`xhK¨w_
+DGK :sھ#^;!o378w"_XfZ9ib
+_`o^LbGk%mHN:8
+DwGVGp`Zlq%Qݢ>FqoM* ΁73y/ 
+elniƻӃ2}գlWSr[I2S
+ubY]h7"AnH	9t0m
+fY2yȬ\C^̵̤$Q´o*{g'k;8'h>nAaG
+`lJqB˕NJ.~׌gU."h9.V>CvMBw[ÕM
+__M(FMjV9H(^{QPzc8!FѥOGv8$[%)3RSifޱ&>/)z`j
+46(VDAL5wrvDl
+:oϳqp:>Xo|F-s)Cpyz,#GR+I^$/|	V#>Kqv82;0\qū]F$Dzjr]ą|կFaG`iJ5P{Jh-lH)f:=lz}fD\mKxTR+LeH^Q~B;sX8NqB6퓏ɸå.b?jŧ4׺w'aipgb9
+,c.
+fe~aߕzoDԊNR퓿zl  ]:Z4^`%,눆pVfrLn(cG-;F"]#ç0$j'|'g@;##{ 4C?݈߱ þ;]H<\hk0Fzv _Hb WEj?YH1|缦qu(x}\	_edWG5Cc{oJFB^j^a8iؓ^WYȷ+!Уs%<޺-|E< h*vK2MYjj_YH[evh!k']+טeZ#rpX>nm@̍W6R(
+0STL7㽺H6ތt/E9}Aycs@m@}cgrVd̅;~.'*B4˰+bs׮\V̊3+H'6CsLu >[#jIyFJGa1>h!
+v4}"]7ؒOˬ~6-H
+<:ޚbq
+<TҌܽ	qQ2mm8`bl=πBZ{VT(Du0|/d>u)adVNŒ8lsNjIA̐52BuׂH+[ڹ^u"6r 
+n({pU.O9b+ jB|5=cߜJ_K/i)n r咜#Gqw!s8Ftǆ)'gS	xBYn6RM ә*,:d>
+U2s?I_jxyl673`ϸ.rW\qdC}``f
+F}}X͡"pO:Q@
+<D UXD:yw]a5g߿tvJF0g_1ŕJ1ږ	"LLG[ʿ[2J/l`5lly1DJFKViLm0Ff$c35q/"PW1g}dffK)I8Zg.Li\yzD5m+$)JR),T ClLu ϟe70"N=+^v]8@cuA}pг
+>Rh򬺁#>r1;:v 4$'}$%B	Q7yڦt	_Z1=""ǇO )/Rgm
+uf&0?UI${;:WSC+MtM8Wĉ!u)QՒNC`'IM[`Sft׾@}`X}!^ +@7AP`%EIqi|BbEh>#o57Bԭ
+X
+һ<	bVX$}_V$N3+!˘&BVQPp3jm#Qr1c!v>e,>r 48ytLO{y5]pE@iIM	݂>
+.T|(!>F8CRU{{8%F7VikRD}77.zP
+!&JzkY%u%+h
+'>$vur?.;ڪ)PFYvPe"&Ems!OeyB}Cʏuh!o4-YPZC&$BM=!R\-^sdÉclH2t4T_ȁFf|@3֠ k/XǺFC
+uxyte^?T!+'V1pݖ8,YGkq2)N_Iej8@ <&-x_ f	Q)u/S\
+`IqO+{B-⬖OPڤ`^ӴNY8'@"߽hEc]0N$QQN	ѹY
+s|!D͌[ԼVP!H#t?>
+wI7ۄ-تᬰV|/:3mA<{qd6ٺΫO8M]Y;n&u7c`;QMyOZαnwPcw?rmi;T3\;eu349JlTd4*T&)
+ŗn*'ňGνsBdaݴRH۶d23
+`HR.UVǮLTh>bf "-"hh8Er:0Fk׫F=rr w C/y_@o1 {}﷩iTLkG50=B0q(LπC]-GAYoLO?Y +33po)M+g4W! m	FJ;ɶpJ
+#	aoŲezXmd/R-Dl-Rv8m{R>]sy-Wy-)7M
+8Ri^*
+YU~!_v9rZU`/~ziOs\Nۿ7ٺfpB=~z}\dϼiYLP
+͜qq 	Q~o[j1A8LqѱG	m^1NE>A*;9.cLYR  ZUlI͈m]~ğYod4D`mrr8P!YZtbd{p)N<4kȪ3e&/9r Nw<C:M!gg/>]|[>aeHunqKD
+KRFU
+ݸEY& Xr#dghoiPlʺRcQЄaPa73FYm6Kw|*W3r|:3:}4.'Q iZA		"£r )H#p˫pœ@6YeWzp(2zxcX1kSS1⦷(a'C	ڎ4ROyr}c ٥rK٤ YAIisfp#11C  =Qr2 sƍFBӈ~W#͸1@F+s'gPlE!:꜇!VҮFݖBR"ph5obsٔh~2-n/Uc
+xYj岐7D5P	NG+?RzSϏOy
+Ԡ/x1a\\#8#Dv
+DcwuO7G%::QQxᄘ1YP[C-Οe`hqF)9F>Kªǎ*"F"KdI Deg4&qCD9WvG/!Cc+x66wquצ-L9/G.2&lei}"gW6taϻZq)knޖb	1ȆhA>2&4TaVf|ˀYB7SÊHsnvhEhobwB4O8,{L3r|=YKrX\N$~w^xOF/2UPk>lӣ}VC/p+eF
+(G`ww{KpD 6#A@_%Ɨ3^W?JM"@?el
+  =J^JI^Ќ'(s,Q&6rO؊\)(u\ĜQ,hu5cgLYHC>zAۯB`	gLPY[H&n: 嗑 U&E 2P74ù*a@ vaN̩~nڱEMG+t10āWu唖v/	#6^&?ʁ|Ah(m^V4\}I"VBDΖ!J>Ӛx~?@ A&#L٤Fmv7ҷ3<Y3>.ُ߂α"45rLC;Zg^ޑv#F-NDtHp%z$4
+NԞNڧ'zIg%7஦s9o9)4b}YRh43jpA#EKȤ^`6F9aD v8e]Xj~80诌Q.`꩔PM`.0ΥHk<.?( mә_݇U '1<tH ^&m,{ 2	Sw1;MЏ7v:{`/.\n+3&h=BݍC][-<:C 9UhD I#Szfс3G2AM	V @IcC 
+XX
+/.4β((P c}  e@Hs&RZ2*#䦑+1dp'_ U 
+Cg ɂ8atxHY"wtA㻴7_"y,iѧ@YpaEZI+p[#$mh{י4uiڳ\U=́# X0]z!^?49|KhsJeF Tt)3>Jx#L:;; ܙ]bo)9=i-]sK@I   
+

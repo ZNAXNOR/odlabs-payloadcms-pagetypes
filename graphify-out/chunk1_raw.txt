@@ -1,0 +1,1129 @@
+--- FILE: eslint.config.js ---
+// @ts-check
+
+import payloadEsLintConfig from '@payloadcms/eslint-config'
+
+export const defaultESLintIgnores = [
+  '**/.temp',
+  '**/.*', // ignore all dotfiles
+  '**/.git',
+  '**/.hg',
+  '**/.pnp.*',
+  '**/.svn',
+  '**/playwright.config.ts',
+  '**/vitest.config.js',
+  '**/tsconfig.tsbuildinfo',
+  '**/README.md',
+  '**/eslint.config.js',
+  '**/payload-types.ts',
+  '**/dist/',
+  '**/.yarn/',
+  '**/build/',
+  '**/node_modules/',
+  '**/temp/',
+]
+
+export default [
+  ...payloadEsLintConfig,
+  {
+    rules: {
+      'no-restricted-exports': 'off',
+    },
+  },
+  {
+    languageOptions: {
+      parserOptions: {
+        sourceType: 'module',
+        ecmaVersion: 'latest',
+        projectService: {
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 40,
+          allowDefaultProject: ['scripts/*.ts', '*.js', '*.mjs', '*.spec.ts', '*.d.ts'],
+        },
+        // projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+]
+
+
+--- FILE: playwright.config.js ---
+import { defineConfig, devices } from '@playwright/test'
+
+/**
+ * Read environment variables from file.
+ * https://github.com/motdotla/dotenv
+ */
+// import dotenv from 'dotenv';
+// import path from 'path';
+// dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+/**
+ * See https://playwright.dev/docs/test-configuration.
+ */
+export default defineConfig({
+  testDir: './dev',
+  testMatch: '**/e2e.spec.{ts,js}',
+  /* Run tests in files in parallel */
+  fullyParallel: true,
+  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  forbidOnly: !!process.env.CI,
+  /* Retry on CI only */
+  retries: process.env.CI ? 2 : 0,
+  /* Opt out of parallel tests on CI. */
+  workers: process.env.CI ? 1 : undefined,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  reporter: 'html',
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+  use: {
+    /* Base URL to use in actions like `await page.goto('/')`. */
+    baseURL: 'http://localhost:3000',
+
+    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    trace: 'on-first-retry',
+  },
+  webServer: {
+    command: 'pnpm dev',
+    reuseExistingServer: true,
+    url: 'http://localhost:3000/admin',
+  },
+})
+
+
+--- FILE: postcss.config.mjs ---
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+}
+
+
+--- FILE: vitest.config.js ---
+import path from 'path'
+import { loadEnv } from 'payload/node'
+import { fileURLToPath } from 'url'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import { defineConfig } from 'vitest/config'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+export default defineConfig(() => {
+  loadEnv(path.resolve(dirname, './dev'))
+
+  return {
+    plugins: [
+      tsconfigPaths({
+        ignoreConfigErrors: true,
+      }),
+    ],
+    test: {
+      environment: 'node',
+      hookTimeout: 30_000,
+      testTimeout: 30_000,
+    },
+  }
+})
+
+
+--- FILE: dev/e2e.spec.ts ---
+import { expect, test } from '@playwright/test'
+
+// this is an example Playwright e2e test
+test('should render admin panel logo', async ({ page }) => {
+  await page.goto('/admin')
+
+  // login
+  await page.fill('#field-email', 'dev@payloadcms.com')
+  await page.fill('#field-password', 'test')
+  await page.click('.form-submit button')
+
+  // should show dashboard
+  await expect(page).toHaveTitle(/Dashboard/)
+  await expect(page.locator('.graphic-icon')).toBeVisible()
+})
+
+test('should show page types health widget in the dashboard drawer', async ({ page }) => {
+  await page.goto('/admin')
+
+  // login
+  await page.fill('#field-email', 'dev@payloadcms.com')
+  await page.fill('#field-password', 'test')
+  await page.click('.form-submit button')
+
+  // Open dashboard edit mode (modular dashboard)
+  // Note: The selector for "Edit Dashboard" might depend on Payload version
+  const editButton = page.locator('button:has-text("Edit Dashboard")')
+  if (await editButton.isVisible()) {
+    await editButton.click()
+    
+    // Click add widget
+    await page.locator('button:has-text("Add Widget")').click()
+    
+    // Check if our widget is in the list
+    await expect(page.locator('text=Page Types Health')).toBeVisible()
+  }
+})
+
+
+--- FILE: dev/int.spec.ts ---
+import type { Payload } from 'payload'
+
+import config from '@payload-config'
+import { createPayloadRequest, getPayload } from 'payload'
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+
+import { customEndpointHandler } from '../src/endpoints/customEndpointHandler.js'
+
+let payload: Payload
+
+afterAll(async () => {
+  await payload.destroy()
+})
+
+beforeAll(async () => {
+  payload = await getPayload({ config })
+})
+
+describe('Plugin integration tests', () => {
+  test('should query custom endpoint added by plugin', async () => {
+    const request = new Request('http://localhost:3000/api/my-plugin-endpoint', {
+      method: 'GET',
+    })
+
+    const payloadRequest = await createPayloadRequest({ config, request })
+    const response = await customEndpointHandler(payloadRequest)
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data).toMatchObject({
+      message: 'Hello from custom endpoint',
+    })
+  })
+
+  test('can create post with custom text field added by plugin', async () => {
+    const post = await payload.create({
+      collection: 'posts',
+      data: {
+        addedByPlugin: 'added by plugin',
+      },
+    })
+    expect(post.addedByPlugin).toBe('added by plugin')
+  })
+
+  test('plugin creates and seeds plugin-collection', async () => {
+    expect(payload.collections['plugin-collection']).toBeDefined()
+
+    const { docs } = await payload.find({ collection: 'plugin-collection' })
+
+    expect(docs).toHaveLength(1)
+  })
+})
+
+
+--- FILE: dev/next-env.d.ts ---
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+import "./.next/dev/types/routes.d.ts";
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+
+
+--- FILE: dev/next.config.mjs ---
+import { withPayload } from '@payloadcms/next/withPayload'
+import { fileURLToPath } from 'url'
+import path from 'path'
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  webpack: (webpackConfig) => {
+    webpackConfig.resolve.extensionAlias = {
+      '.cjs': ['.cts', '.cjs'],
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+    }
+
+    return webpackConfig
+  },
+}
+
+export default withPayload(nextConfig, { devBundleServerPackages: false })
+
+
+--- FILE: dev/payload-types.ts ---
+/* tslint:disable */
+/* eslint-disable */
+/**
+ * This file was automatically generated by Payload.
+ * DO NOT MODIFY IT BY HAND. Instead, modify your source Payload config,
+ * and re-run `payload generate:types` to regenerate this file.
+ */
+
+/**
+ * Supported timezones in IANA format.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "supportedTimezones".
+ */
+export type SupportedTimezones =
+  | 'Pacific/Midway'
+  | 'Pacific/Niue'
+  | 'Pacific/Honolulu'
+  | 'Pacific/Rarotonga'
+  | 'America/Anchorage'
+  | 'Pacific/Gambier'
+  | 'America/Los_Angeles'
+  | 'America/Tijuana'
+  | 'America/Denver'
+  | 'America/Phoenix'
+  | 'America/Chicago'
+  | 'America/Guatemala'
+  | 'America/New_York'
+  | 'America/Bogota'
+  | 'America/Caracas'
+  | 'America/Santiago'
+  | 'America/Buenos_Aires'
+  | 'America/Sao_Paulo'
+  | 'Atlantic/South_Georgia'
+  | 'Atlantic/Azores'
+  | 'Atlantic/Cape_Verde'
+  | 'Europe/London'
+  | 'Europe/Berlin'
+  | 'Africa/Lagos'
+  | 'Europe/Athens'
+  | 'Africa/Cairo'
+  | 'Europe/Moscow'
+  | 'Asia/Riyadh'
+  | 'Asia/Dubai'
+  | 'Asia/Baku'
+  | 'Asia/Karachi'
+  | 'Asia/Tashkent'
+  | 'Asia/Calcutta'
+  | 'Asia/Dhaka'
+  | 'Asia/Almaty'
+  | 'Asia/Jakarta'
+  | 'Asia/Bangkok'
+  | 'Asia/Shanghai'
+  | 'Asia/Singapore'
+  | 'Asia/Tokyo'
+  | 'Asia/Seoul'
+  | 'Australia/Brisbane'
+  | 'Australia/Sydney'
+  | 'Pacific/Guam'
+  | 'Pacific/Noumea'
+  | 'Pacific/Auckland'
+  | 'Pacific/Fiji';
+
+export interface Config {
+  auth: {
+    users: UserAuthOperations;
+  };
+  blocks: {};
+  collections: {
+    posts: Post;
+    pages: Page;
+    media: Media;
+    users: User;
+    'payload-kv': PayloadKv;
+    'payload-locked-documents': PayloadLockedDocument;
+    'payload-preferences': PayloadPreference;
+    'payload-migrations': PayloadMigration;
+  };
+  collectionsJoins: {};
+  collectionsSelect: {
+    posts: PostsSelect<false> | PostsSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
+    'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
+    'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
+    'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
+  };
+  db: {
+    defaultIDType: number;
+  };
+  fallbackLocale: null;
+  globals: {};
+  globalsSelect: {};
+  locale: null;
+  widgets: {
+    'page-types-health': PageTypesHealthWidget;
+    collections: CollectionsWidget;
+  };
+  user: User;
+  jobs: {
+    tasks: unknown;
+    workflows: unknown;
+  };
+}
+export interface UserAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts".
+ */
+export interface Post {
+  id: number;
+  title?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  layout?:
+    | (
+        | {
+            text?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'globalBlock';
+          }
+        | {
+            text?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'serviceBlock';
+          }
+        | {
+            text?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'legalBlock';
+          }
+      )[]
+    | null;
+  breadcrumbs?:
+    | {
+        doc?: (number | null) | Page;
+        url?: string | null;
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  parent?: (number | null) | Page;
+  /**
+   * Choose the page type. Child pages inherit from their root.
+   */
+  pageType?: ('services' | 'legal') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv".
+ */
+export interface PayloadKv {
+  id: number;
+  key: string;
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-locked-documents".
+ */
+export interface PayloadLockedDocument {
+  id: number;
+  document?:
+    | ({
+        relationTo: 'posts';
+        value: number | Post;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'media';
+        value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null);
+  globalSlug?: string | null;
+  user: {
+    relationTo: 'users';
+    value: number | User;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-preferences".
+ */
+export interface PayloadPreference {
+  id: number;
+  user: {
+    relationTo: 'users';
+    value: number | User;
+  };
+  key?: string | null;
+  value?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-migrations".
+ */
+export interface PayloadMigration {
+  id: number;
+  name?: string | null;
+  batch?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts_select".
+ */
+export interface PostsSelect<T extends boolean = true> {
+  title?: T;
+  content?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  content?: T;
+  layout?:
+    | T
+    | {
+        globalBlock?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+              blockName?: T;
+            };
+        serviceBlock?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+              blockName?: T;
+            };
+        legalBlock?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+              blockName?: T;
+            };
+      };
+  breadcrumbs?:
+    | T
+    | {
+        doc?: T;
+        url?: T;
+        label?: T;
+        id?: T;
+      };
+  generateSlug?: T;
+  slug?: T;
+  parent?: T;
+  pageType?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users_select".
+ */
+export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv_select".
+ */
+export interface PayloadKvSelect<T extends boolean = true> {
+  key?: T;
+  data?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-locked-documents_select".
+ */
+export interface PayloadLockedDocumentsSelect<T extends boolean = true> {
+  document?: T;
+  globalSlug?: T;
+  user?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-preferences_select".
+ */
+export interface PayloadPreferencesSelect<T extends boolean = true> {
+  user?: T;
+  key?: T;
+  value?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-migrations_select".
+ */
+export interface PayloadMigrationsSelect<T extends boolean = true> {
+  name?: T;
+  batch?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-types-health_widget".
+ */
+export interface PageTypesHealthWidget {
+  data?: {
+    pageTypes?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+    collectionSlug?: string | null;
+  };
+  width: 'small' | 'medium' | 'large' | 'x-large' | 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "collections_widget".
+ */
+export interface CollectionsWidget {
+  data?: {
+    [k: string]: unknown;
+  };
+  width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "auth".
+ */
+export interface Auth {
+  [k: string]: unknown;
+}
+
+
+declare module 'payload' {
+  export interface GeneratedTypes extends Config {}
+}
+
+--- FILE: dev/payload.config.ts ---
+import { sqliteAdapter } from '@payloadcms/db-sqlite'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import path from 'path'
+import { buildConfig } from 'payload'
+import sharp from 'sharp'
+import { fileURLToPath } from 'url'
+import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
+
+import { pageTypesPlugin } from '../src/index'
+import { GlobalBlock } from './blocks/GlobalBlock/config'
+import { LegalBlock } from './blocks/LegalBlock/config'
+import { ServiceBlock } from './blocks/ServiceBlock/config'
+import { testEmailAdapter } from './helpers/testEmailAdapter'
+import { seed } from './seed'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+if (!process.env.ROOT_DIR) {
+  process.env.ROOT_DIR = dirname
+}
+
+export default buildConfig({
+  admin: {
+    importMap: {
+      baseDir: path.resolve(dirname),
+    },
+    user: 'users',
+  },
+  collections: [
+    {
+      slug: 'posts',
+      fields: [
+        {
+          name: 'title',
+          type: 'text',
+        },
+        {
+          name: 'content',
+          type: 'richText',
+        },
+      ],
+    },
+    {
+      slug: 'pages',
+      fields: [
+        {
+          name: 'title',
+          type: 'text',
+        },
+        {
+          name: 'content',
+          type: 'richText',
+        },
+        {
+          name: 'layout',
+          type: 'blocks',
+          blocks: [GlobalBlock, ServiceBlock, LegalBlock],
+        },
+      ],
+    },
+    {
+      slug: 'media',
+      fields: [],
+      upload: {
+        staticDir: path.resolve(dirname, 'media'),
+      },
+    },
+    {
+      slug: 'users',
+      auth: true,
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+        },
+      ],
+    },
+  ],
+  db: sqliteAdapter({
+    client: {
+      url: process.env.DATABASE_URI || 'file:./dev/payload.db',
+    },
+  }),
+  editor: lexicalEditor(),
+  email: testEmailAdapter,
+  onInit: async (payload) => {
+    await seed(payload)
+  },
+  plugins: [
+    nestedDocsPlugin({
+      collections: ['pages'],
+      generateURL: (docs: any[]) => docs.map((doc: any) => doc.slug).join('/'),
+    }),
+    pageTypesPlugin({
+      collectionSlug: 'pages',
+      enforceRootSlug: true,
+      pageTypes: [
+        { slug: 'services', label: 'Services', required: true },
+        { slug: 'legal', label: 'Legal', required: true },
+      ],
+      enableDashboardWidget: true, // Toggle on/off
+      // Note: restrictions auto-extracted from block configs
+    }),
+  ],
+  secret: process.env.PAYLOAD_SECRET || 'test-secret_key',
+  sharp,
+  typescript: {
+    outputFile: path.resolve(dirname, 'payload-types.ts'),
+  },
+})
+
+
+--- FILE: dev/seed.ts ---
+import type { Payload } from 'payload'
+
+import { devUser } from './helpers/credentials'
+
+export const seed = async (payload: Payload) => {
+  const { totalDocs } = await payload.count({
+    collection: 'users',
+    where: {
+      email: {
+        equals: devUser.email,
+      },
+    },
+  })
+
+  if (!totalDocs) {
+    await payload.create({
+      collection: 'users',
+      data: devUser,
+    })
+  }
+}
+
+
+--- FILE: dev/app/(payload)/layout.tsx ---
+import type { ServerFunctionClient } from 'payload'
+
+import '@payloadcms/next/css'
+/* THIS FILE WAS GENERATED AUTOMATICALLY BY PAYLOAD. */
+/* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
+import config from '@payload-config'
+import { handleServerFunctions, RootLayout } from '@payloadcms/next/layouts'
+import React from 'react'
+
+import { importMap } from './admin/importMap'
+
+type Args = {
+  children: React.ReactNode
+}
+
+const serverFunction: ServerFunctionClient = async function (args) {
+  'use server'
+  return handleServerFunctions({
+    ...args,
+    config,
+    importMap,
+  })
+}
+
+const Layout = ({ children }: Args) => (
+  <RootLayout config={config} importMap={importMap} serverFunction={serverFunction}>
+    {children}
+  </RootLayout>
+)
+
+export default Layout
+
+
+--- FILE: dev/app/(payload)/admin/importMap.js ---
+import { RscEntryLexicalCell as RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
+import { RscEntryLexicalField as RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
+import { LexicalDiffComponent as LexicalDiffComponent_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
+import { InlineToolbarFeatureClient as InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { HorizontalRuleFeatureClient as HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { UploadFeatureClient as UploadFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { BlockquoteFeatureClient as BlockquoteFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { RelationshipFeatureClient as RelationshipFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { LinkFeatureClient as LinkFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { ChecklistFeatureClient as ChecklistFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { OrderedListFeatureClient as OrderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { UnorderedListFeatureClient as UnorderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { IndentFeatureClient as IndentFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { AlignFeatureClient as AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { HeadingFeatureClient as HeadingFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { ParagraphFeatureClient as ParagraphFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { InlineCodeFeatureClient as InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { SuperscriptFeatureClient as SuperscriptFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { SubscriptFeatureClient as SubscriptFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { StrikethroughFeatureClient as StrikethroughFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { SlugField as SlugField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
+import { SlugDescription as SlugDescription_cd6bfd0b8df2fcc817d6009c6b98c51b } from '@od-labs/payload-pagetypes/client'
+import { PageTypeField as PageTypeField_cd6bfd0b8df2fcc817d6009c6b98c51b } from '@od-labs/payload-pagetypes/client'
+import { PageTypesHealthWidget as PageTypesHealthWidget_9fa87514f73d81a7c22e0d32471d96bb } from '@od-labs/payload-pagetypes/rsc'
+import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
+
+export const importMap = {
+  "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
+  "@payloadcms/richtext-lexical/rsc#RscEntryLexicalField": RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e,
+  "@payloadcms/richtext-lexical/rsc#LexicalDiffComponent": LexicalDiffComponent_44fe37237e0ebf4470c9990d8cb7b07e,
+  "@payloadcms/richtext-lexical/client#InlineToolbarFeatureClient": InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#HorizontalRuleFeatureClient": HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#UploadFeatureClient": UploadFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#BlockquoteFeatureClient": BlockquoteFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#RelationshipFeatureClient": RelationshipFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#LinkFeatureClient": LinkFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#ChecklistFeatureClient": ChecklistFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#OrderedListFeatureClient": OrderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#UnorderedListFeatureClient": UnorderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#IndentFeatureClient": IndentFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#AlignFeatureClient": AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#HeadingFeatureClient": HeadingFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#ParagraphFeatureClient": ParagraphFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#InlineCodeFeatureClient": InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#SuperscriptFeatureClient": SuperscriptFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#SubscriptFeatureClient": SubscriptFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#StrikethroughFeatureClient": StrikethroughFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#UnderlineFeatureClient": UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/next/client#SlugField": SlugField_2b8867833a34864a02ddf429b0728a40,
+  "@od-labs/payload-pagetypes/client#SlugDescription": SlugDescription_cd6bfd0b8df2fcc817d6009c6b98c51b,
+  "@od-labs/payload-pagetypes/client#PageTypeField": PageTypeField_cd6bfd0b8df2fcc817d6009c6b98c51b,
+  "@od-labs/payload-pagetypes/rsc#PageTypesHealthWidget": PageTypesHealthWidget_9fa87514f73d81a7c22e0d32471d96bb,
+  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
+}
+
+
+--- FILE: dev/app/(payload)/admin/[[...segments]]/not-found.tsx ---
+/* THIS FILE WAS GENERATED AUTOMATICALLY BY PAYLOAD. */
+/* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
+import type { Metadata } from 'next'
+
+import config from '@payload-config'
+import { generatePageMetadata, NotFoundPage } from '@payloadcms/next/views'
+
+import { importMap } from '../importMap.js'
+
+type Args = {
+  params: Promise<{
+    segments: string[]
+  }>
+  searchParams: Promise<{
+    [key: string]: string | string[]
+  }>
+}
+
+export const generateMetadata = ({ params, searchParams }: Args): Promise<Metadata> =>
+  generatePageMetadata({ config, params, searchParams })
+
+const NotFound = ({ params, searchParams }: Args) =>
+  NotFoundPage({ config, importMap, params, searchParams })
+
+export default NotFound
+
+
+--- FILE: dev/app/(payload)/admin/[[...segments]]/page.tsx ---
+/* THIS FILE WAS GENERATED AUTOMATICALLY BY PAYLOAD. */
+/* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
+import type { Metadata } from 'next'
+
+import config from '@payload-config'
+import { generatePageMetadata, RootPage } from '@payloadcms/next/views'
+
+import { importMap } from '../importMap.js'
+
+type Args = {
+  params: Promise<{
+    segments: string[]
+  }>
+  searchParams: Promise<{
+    [key: string]: string | string[]
+  }>
+}
+
+export const generateMetadata = ({ params, searchParams }: Args): Promise<Metadata> =>
+  generatePageMetadata({ config, params, searchParams })
+
+const Page = ({ params, searchParams }: Args) =>
+  RootPage({ config, importMap, params, searchParams })
+
+export default Page
+
+
+--- FILE: dev/app/(payload)/api/graphql/route.ts ---
+/* THIS FILE WAS GENERATED AUTOMATICALLY BY PAYLOAD. */
+/* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
+import config from '@payload-config'
+import { GRAPHQL_POST, REST_OPTIONS } from '@payloadcms/next/routes'
+
+export const POST = GRAPHQL_POST(config)
+
+export const OPTIONS = REST_OPTIONS(config)
+
+
+--- FILE: dev/app/(payload)/api/graphql-playground/route.ts ---
+/* THIS FILE WAS GENERATED AUTOMATICALLY BY PAYLOAD. */
+/* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
+import config from '@payload-config'
+import '@payloadcms/next/css'
+import { GRAPHQL_PLAYGROUND_GET } from '@payloadcms/next/routes'
+
+export const GET = GRAPHQL_PLAYGROUND_GET(config)
+
+
+--- FILE: dev/app/(payload)/api/[...slug]/route.ts ---
+/* THIS FILE WAS GENERATED AUTOMATICALLY BY PAYLOAD. */
+/* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
+import config from '@payload-config'
+import '@payloadcms/next/css'
+import {
+  REST_DELETE,
+  REST_GET,
+  REST_OPTIONS,
+  REST_PATCH,
+  REST_POST,
+  REST_PUT,
+} from '@payloadcms/next/routes'
+
+export const GET = REST_GET(config)
+export const POST = REST_POST(config)
+export const DELETE = REST_DELETE(config)
+export const PATCH = REST_PATCH(config)
+export const PUT = REST_PUT(config)
+export const OPTIONS = REST_OPTIONS(config)
+
+
+--- FILE: dev/app/my-route/route.ts ---
+import configPromise from '@payload-config'
+import { getPayload } from 'payload'
+
+export const GET = async (request: Request) => {
+  const payload = await getPayload({
+    config: configPromise,
+  })
+
+  return Response.json({
+    message: 'This is an example of a custom route.',
+  })
+}
+
+

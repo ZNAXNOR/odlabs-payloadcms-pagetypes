@@ -1,6 +1,6 @@
 {
   "name": "@od-labs/payload-pagetypes",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Payload CMS plugin for enforcing page types and block restrictions",
   "keywords": [
     "payloadcms",
@@ -79,7 +79,6 @@
     "@payloadcms/db-sqlite": "^3.82.1",
     "@payloadcms/eslint-config": "3.28.0",
     "@payloadcms/next": "3.82.1",
-    "@payloadcms/plugin-nested-docs": "3.82.1",
     "@payloadcms/richtext-lexical": "3.82.1",
     "@payloadcms/ui": "3.82.1",
     "@playwright/test": "1.58.2",
@@ -146,6 +145,7 @@
   },
   "registry": "https://registry.npmjs.org/",
   "dependencies": {
+    "@payloadcms/plugin-nested-docs": "3.82.1",
     "lucide-react": "^1.14.0"
   }
 }

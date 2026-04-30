@@ -1,0 +1,13 @@
+vendor/
+node_modules/
+dist/
+*.generated.py
+
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.gemini/
+.opencode/
+
+.next
+

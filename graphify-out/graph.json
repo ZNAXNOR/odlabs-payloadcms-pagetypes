@@ -1,0 +1,1615 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+    "hyperedges": [
+      {
+        "id": "dev_environment",
+        "label": "Development Environment Stack",
+        "nodes": [
+          "payload_config",
+          "next_config",
+          "seed_script",
+          "admin_layout"
+        ],
+        "relation": "participate_in",
+        "confidence": "INFERRED",
+        "confidence_score": 0.9
+      },
+      {
+        "id": "core_logic",
+        "label": "Core Plugin Architecture",
+        "nodes": [
+          "plugin_main",
+          "enhance_collection",
+          "plugin_hooks",
+          "resolve_root"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0
+      },
+      {
+        "id": "documentation",
+        "label": "Project Documentation",
+        "nodes": [
+          "readme",
+          "how_it_works",
+          "phase1_docs",
+          "phase3_docs"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "label": "eslint.config.js",
+      "file_type": "code",
+      "source_file": "eslint.config.js",
+      "source_location": "L1",
+      "id": "eslint_config_js",
+      "community": 9,
+      "norm_label": "eslint.config.js"
+    },
+    {
+      "label": "playwright.config.js",
+      "file_type": "code",
+      "source_file": "playwright.config.js",
+      "source_location": "L1",
+      "id": "playwright_config_js",
+      "community": 19,
+      "norm_label": "playwright.config.js"
+    },
+    {
+      "label": "postcss.config.mjs",
+      "file_type": "code",
+      "source_file": "postcss.config.mjs",
+      "source_location": "L1",
+      "id": "postcss_config_mjs",
+      "community": 20,
+      "norm_label": "postcss.config.mjs"
+    },
+    {
+      "label": "vitest.config.js",
+      "file_type": "code",
+      "source_file": "vitest.config.js",
+      "source_location": "L1",
+      "id": "vitest_config_js",
+      "community": 21,
+      "norm_label": "vitest.config.js"
+    },
+    {
+      "label": "e2e.spec.ts",
+      "file_type": "code",
+      "source_file": "dev\\e2e.spec.ts",
+      "source_location": "L1",
+      "id": "dev_e2e_spec_ts",
+      "community": 22,
+      "norm_label": "e2e.spec.ts"
+    },
+    {
+      "label": "int.spec.ts",
+      "file_type": "code",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L1",
+      "id": "dev_int_spec_ts",
+      "community": 0,
+      "norm_label": "int.spec.ts"
+    },
+    {
+      "label": "next-env.d.ts",
+      "file_type": "code",
+      "source_file": "dev\\next-env.d.ts",
+      "source_location": "L1",
+      "id": "dev_next_env_d_ts",
+      "community": 23,
+      "norm_label": "next-env.d.ts"
+    },
+    {
+      "label": "next.config.mjs",
+      "file_type": "code",
+      "source_file": "dev\\next.config.mjs",
+      "source_location": "L1",
+      "id": "dev_next_config_mjs",
+      "community": 24,
+      "norm_label": "next.config.mjs"
+    },
+    {
+      "label": "payload-types.ts",
+      "file_type": "code",
+      "source_file": "dev\\payload-types.ts",
+      "source_location": "L1",
+      "id": "dev_payload_types_ts",
+      "community": 25,
+      "norm_label": "payload-types.ts"
+    },
+    {
+      "label": "payload.config.ts",
+      "file_type": "code",
+      "source_file": "dev\\payload.config.ts",
+      "source_location": "L1",
+      "id": "dev_payload_config_ts",
+      "community": 0,
+      "norm_label": "payload.config.ts"
+    },
+    {
+      "label": "seed.ts",
+      "file_type": "code",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L1",
+      "id": "dev_seed_ts",
+      "community": 10,
+      "norm_label": "seed.ts"
+    },
+    {
+      "label": "seed()",
+      "file_type": "code",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L5",
+      "id": "dev_seed_seed",
+      "community": 10,
+      "norm_label": "seed()"
+    },
+    {
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L1",
+      "id": "dev_app_payload_layout_tsx",
+      "community": 0,
+      "norm_label": "layout.tsx"
+    },
+    {
+      "label": "Layout()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L25",
+      "id": "payload_layout_layout",
+      "community": 0,
+      "norm_label": "layout()"
+    },
+    {
+      "label": "importMap.js",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L1",
+      "id": "dev_app_payload_admin_importmap_js",
+      "community": 6,
+      "norm_label": "importmap.js"
+    },
+    {
+      "label": "not-found.tsx",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L1",
+      "id": "dev_app_payload_admin_segments_not_found_tsx",
+      "community": 0,
+      "norm_label": "not-found.tsx"
+    },
+    {
+      "label": "generateMetadata()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L19",
+      "id": "segments_not_found_generatemetadata",
+      "community": 0,
+      "norm_label": "generatemetadata()"
+    },
+    {
+      "label": "NotFound()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L22",
+      "id": "segments_not_found_notfound",
+      "community": 0,
+      "norm_label": "notfound()"
+    },
+    {
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L1",
+      "id": "dev_app_payload_admin_segments_page_tsx",
+      "community": 0,
+      "norm_label": "page.tsx"
+    },
+    {
+      "label": "generateMetadata()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L19",
+      "id": "segments_page_generatemetadata",
+      "community": 0,
+      "norm_label": "generatemetadata()"
+    },
+    {
+      "label": "Page()",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L22",
+      "id": "segments_page_page",
+      "community": 0,
+      "norm_label": "page()"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\api\\graphql\\route.ts",
+      "source_location": "L1",
+      "id": "dev_app_payload_api_graphql_route_ts",
+      "community": 0,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\api\\graphql-playground\\route.ts",
+      "source_location": "L1",
+      "id": "dev_app_payload_api_graphql_playground_route_ts",
+      "community": 0,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\(payload)\\api\\[...slug]\\route.ts",
+      "source_location": "L1",
+      "id": "dev_app_payload_api_slug_route_ts",
+      "community": 0,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L1",
+      "id": "dev_app_my_route_route_ts",
+      "community": 0,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L4",
+      "id": "my_route_route_get",
+      "community": 0,
+      "norm_label": "get()"
+    },
+    {
+      "label": "config.ts",
+      "file_type": "code",
+      "source_file": "dev\\blocks\\GlobalBlock\\config.ts",
+      "source_location": "L1",
+      "id": "dev_blocks_globalblock_config_ts",
+      "community": 26,
+      "norm_label": "config.ts"
+    },
+    {
+      "label": "config.ts",
+      "file_type": "code",
+      "source_file": "dev\\blocks\\LegalBlock\\config.ts",
+      "source_location": "L1",
+      "id": "dev_blocks_legalblock_config_ts",
+      "community": 27,
+      "norm_label": "config.ts"
+    },
+    {
+      "label": "config.ts",
+      "file_type": "code",
+      "source_file": "dev\\blocks\\ServiceBlock\\config.ts",
+      "source_location": "L1",
+      "id": "dev_blocks_serviceblock_config_ts",
+      "community": 28,
+      "norm_label": "config.ts"
+    },
+    {
+      "label": "Pages.ts",
+      "file_type": "code",
+      "source_file": "dev\\collections\\Pages.ts",
+      "source_location": "L1",
+      "id": "dev_collections_pages_ts",
+      "community": 29,
+      "norm_label": "pages.ts"
+    },
+    {
+      "label": "testEmailAdapter.ts",
+      "file_type": "code",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L1",
+      "id": "dev_helpers_testemailadapter_ts",
+      "community": 7,
+      "norm_label": "testemailadapter.ts"
+    },
+    {
+      "label": "testEmailAdapter()",
+      "file_type": "code",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L6",
+      "id": "helpers_testemailadapter_testemailadapter",
+      "community": 7,
+      "norm_label": "testemailadapter()"
+    },
+    {
+      "label": "getStringifiedToAddress()",
+      "file_type": "code",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L18",
+      "id": "helpers_testemailadapter_getstringifiedtoaddress",
+      "community": 7,
+      "norm_label": "getstringifiedtoaddress()"
+    },
+    {
+      "label": "enhanceCollection.ts",
+      "file_type": "code",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L1",
+      "id": "src_enhancecollection_ts",
+      "community": 3,
+      "norm_label": "enhancecollection.ts"
+    },
+    {
+      "label": "enhanceCollection()",
+      "file_type": "code",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L13",
+      "id": "src_enhancecollection_enhancecollection",
+      "community": 3,
+      "norm_label": "enhancecollection()"
+    },
+    {
+      "label": "hooks.ts",
+      "file_type": "code",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L1",
+      "id": "src_hooks_ts",
+      "community": 3,
+      "norm_label": "hooks.ts"
+    },
+    {
+      "label": "createBeforeValidateHook()",
+      "file_type": "code",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L7",
+      "id": "src_hooks_createbeforevalidatehook",
+      "community": 3,
+      "norm_label": "createbeforevalidatehook()"
+    },
+    {
+      "label": "createBeforeDeleteHook()",
+      "file_type": "code",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L151",
+      "id": "src_hooks_createbeforedeletehook",
+      "community": 3,
+      "norm_label": "createbeforedeletehook()"
+    },
+    {
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L1",
+      "id": "src_index_ts",
+      "community": 5,
+      "norm_label": "index.ts"
+    },
+    {
+      "label": "extractBlockRestrictions()",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L10",
+      "id": "src_index_extractblockrestrictions",
+      "community": 5,
+      "norm_label": "extractblockrestrictions()"
+    },
+    {
+      "label": "pageTypesPlugin()",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L35",
+      "id": "src_index_pagetypesplugin",
+      "community": 5,
+      "norm_label": "pagetypesplugin()"
+    },
+    {
+      "label": "validatePluginConfig()",
+      "file_type": "code",
+      "source_file": "src\\index.ts",
+      "source_location": "L108",
+      "id": "src_index_validatepluginconfig",
+      "community": 5,
+      "norm_label": "validatepluginconfig()"
+    },
+    {
+      "label": "resolveRootPageType.ts",
+      "file_type": "code",
+      "source_file": "src\\resolveRootPageType.ts",
+      "source_location": "L1",
+      "id": "src_resolverootpagetype_ts",
+      "community": 8,
+      "norm_label": "resolverootpagetype.ts"
+    },
+    {
+      "label": "resolveRootPageType()",
+      "file_type": "code",
+      "source_file": "src\\resolveRootPageType.ts",
+      "source_location": "L9",
+      "id": "src_resolverootpagetype_resolverootpagetype",
+      "community": 8,
+      "norm_label": "resolverootpagetype()"
+    },
+    {
+      "label": "types.ts",
+      "file_type": "code",
+      "source_file": "src\\types.ts",
+      "source_location": "L1",
+      "id": "src_types_ts",
+      "community": 3,
+      "norm_label": "types.ts"
+    },
+    {
+      "label": "PageTypesHealth.tsx",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L1",
+      "id": "src_admin_widgets_pagetypeshealth_tsx",
+      "community": 11,
+      "norm_label": "pagetypeshealth.tsx"
+    },
+    {
+      "label": "PageTypesHealthWidget()",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L16",
+      "id": "widgets_pagetypeshealth_pagetypeshealthwidget",
+      "community": 11,
+      "norm_label": "pagetypeshealthwidget()"
+    },
+    {
+      "label": "PageTypesHealthClient.tsx",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\PageTypesHealthClient.tsx",
+      "source_location": "L1",
+      "id": "src_admin_widgets_pagetypeshealthclient_tsx",
+      "community": 30,
+      "norm_label": "pagetypeshealthclient.tsx"
+    },
+    {
+      "label": "QuickCreateButton.tsx",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L1",
+      "id": "src_admin_widgets_quickcreatebutton_tsx",
+      "community": 12,
+      "norm_label": "quickcreatebutton.tsx"
+    },
+    {
+      "label": "QuickCreateButton()",
+      "file_type": "code",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L15",
+      "id": "widgets_quickcreatebutton_quickcreatebutton",
+      "community": 12,
+      "norm_label": "quickcreatebutton()"
+    },
+    {
+      "label": "BeforeDashboardClient.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L1",
+      "id": "src_components_beforedashboardclient_tsx",
+      "community": 13,
+      "norm_label": "beforedashboardclient.tsx"
+    },
+    {
+      "label": "BeforeDashboardClient()",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L6",
+      "id": "components_beforedashboardclient_beforedashboardclient",
+      "community": 13,
+      "norm_label": "beforedashboardclient()"
+    },
+    {
+      "label": "BeforeDashboardServer.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L1",
+      "id": "src_components_beforedashboardserver_tsx",
+      "community": 14,
+      "norm_label": "beforedashboardserver.tsx"
+    },
+    {
+      "label": "BeforeDashboardServer()",
+      "file_type": "code",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L5",
+      "id": "components_beforedashboardserver_beforedashboardserver",
+      "community": 14,
+      "norm_label": "beforedashboardserver()"
+    },
+    {
+      "label": "PageTypeField.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L1",
+      "id": "src_components_pagetypefield_tsx",
+      "community": 15,
+      "norm_label": "pagetypefield.tsx"
+    },
+    {
+      "label": "fetchData()",
+      "file_type": "code",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L31",
+      "id": "components_pagetypefield_fetchdata",
+      "community": 15,
+      "norm_label": "fetchdata()"
+    },
+    {
+      "label": "SlugDescription.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\SlugDescription.tsx",
+      "source_location": "L1",
+      "id": "src_components_slugdescription_tsx",
+      "community": 31,
+      "norm_label": "slugdescription.tsx"
+    },
+    {
+      "label": "customEndpointHandler.ts",
+      "file_type": "code",
+      "source_file": "src\\endpoints\\customEndpointHandler.ts",
+      "source_location": "L1",
+      "id": "src_endpoints_customendpointhandler_ts",
+      "community": 0,
+      "norm_label": "customendpointhandler.ts"
+    },
+    {
+      "label": "customEndpointHandler()",
+      "file_type": "code",
+      "source_file": "src\\endpoints\\customEndpointHandler.ts",
+      "source_location": "L3",
+      "id": "endpoints_customendpointhandler_customendpointhandler",
+      "community": 0,
+      "norm_label": "customendpointhandler()"
+    },
+    {
+      "label": "client.ts",
+      "file_type": "code",
+      "source_file": "src\\exports\\client.ts",
+      "source_location": "L1",
+      "id": "src_exports_client_ts",
+      "community": 6,
+      "norm_label": "client.ts"
+    },
+    {
+      "label": "rsc.ts",
+      "file_type": "code",
+      "source_file": "src\\exports\\rsc.ts",
+      "source_location": "L1",
+      "id": "src_exports_rsc_ts",
+      "community": 6,
+      "norm_label": "rsc.ts"
+    },
+    {
+      "label": "hooks.test.ts",
+      "file_type": "code",
+      "source_file": "src\\__tests__\\hooks.test.ts",
+      "source_location": "L1",
+      "id": "src_tests_hooks_test_ts",
+      "community": 3,
+      "norm_label": "hooks.test.ts"
+    },
+    {
+      "label": "resolveRootPageType.test.ts",
+      "file_type": "code",
+      "source_file": "src\\__tests__\\resolveRootPageType.test.ts",
+      "source_location": "L1",
+      "id": "src_tests_resolverootpagetype_test_ts",
+      "community": 8,
+      "norm_label": "resolverootpagetype.test.ts"
+    },
+    {
+      "label": "ESLint Configuration",
+      "file_type": "code",
+      "source_file": "eslint.config.js",
+      "id": "eslint_config",
+      "community": 9,
+      "norm_label": "eslint configuration"
+    },
+    {
+      "label": "Playwright Configuration",
+      "file_type": "code",
+      "source_file": "playwright.config.js",
+      "id": "playwright_config",
+      "community": 16,
+      "norm_label": "playwright configuration"
+    },
+    {
+      "label": "PostCSS Configuration",
+      "file_type": "code",
+      "source_file": "postcss.config.mjs",
+      "id": "postcss_config",
+      "community": 32,
+      "norm_label": "postcss configuration"
+    },
+    {
+      "label": "Vitest Configuration",
+      "file_type": "code",
+      "source_file": "vitest.config.js",
+      "id": "vitest_config",
+      "community": 17,
+      "norm_label": "vitest configuration"
+    },
+    {
+      "label": "E2E Tests",
+      "file_type": "code",
+      "source_file": "dev/e2e.spec.ts",
+      "id": "e2e_tests",
+      "community": 16,
+      "norm_label": "e2e tests"
+    },
+    {
+      "label": "Integration Tests",
+      "file_type": "code",
+      "source_file": "dev/int.spec.ts",
+      "id": "int_tests",
+      "community": 17,
+      "norm_label": "integration tests"
+    },
+    {
+      "label": "Next.js Configuration",
+      "file_type": "code",
+      "source_file": "dev/next.config.mjs",
+      "id": "next_config",
+      "community": 2,
+      "norm_label": "next.js configuration"
+    },
+    {
+      "label": "Payload Generated Types",
+      "file_type": "code",
+      "source_file": "dev/payload-types.ts",
+      "id": "payload_types",
+      "community": 2,
+      "norm_label": "payload generated types"
+    },
+    {
+      "label": "Payload Development Config",
+      "file_type": "code",
+      "source_file": "dev/payload.config.ts",
+      "id": "payload_config",
+      "community": 2,
+      "norm_label": "payload development config"
+    },
+    {
+      "label": "Database Seeding Script",
+      "file_type": "code",
+      "source_file": "dev/seed.ts",
+      "id": "seed_script",
+      "community": 2,
+      "norm_label": "database seeding script"
+    },
+    {
+      "label": "Admin Panel Layout",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/layout.tsx",
+      "id": "admin_layout",
+      "community": 2,
+      "norm_label": "admin panel layout"
+    },
+    {
+      "label": "Admin Import Map",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/admin/importMap.js",
+      "id": "admin_import_map",
+      "community": 33,
+      "norm_label": "admin import map"
+    },
+    {
+      "label": "Admin Main View",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/admin/[[...segments]]/page.tsx",
+      "id": "admin_page",
+      "community": 2,
+      "norm_label": "admin main view"
+    },
+    {
+      "label": "GraphQL API Route",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/api/graphql/route.ts",
+      "id": "graphql_route",
+      "community": 2,
+      "norm_label": "graphql api route"
+    },
+    {
+      "label": "REST API Route",
+      "file_type": "code",
+      "source_file": "dev/app/(payload)/api/[...slug]/route.ts",
+      "id": "rest_api_route",
+      "community": 2,
+      "norm_label": "rest api route"
+    },
+    {
+      "label": "Global Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/GlobalBlock/config.ts",
+      "id": "global_block",
+      "community": 34,
+      "norm_label": "global block config"
+    },
+    {
+      "label": "Legal Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/LegalBlock/config.ts",
+      "id": "legal_block",
+      "community": 35,
+      "norm_label": "legal block config"
+    },
+    {
+      "label": "Service Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/ServiceBlock/config.ts",
+      "id": "service_block",
+      "community": 18,
+      "norm_label": "service block config"
+    },
+    {
+      "label": "Pages Collection",
+      "file_type": "code",
+      "source_file": "dev/collections/Pages.ts",
+      "id": "pages_collection",
+      "community": 4,
+      "norm_label": "pages collection"
+    },
+    {
+      "label": "Collection Enhancer",
+      "file_type": "code",
+      "source_file": "src/enhanceCollection.ts",
+      "id": "enhance_collection",
+      "community": 1,
+      "norm_label": "collection enhancer"
+    },
+    {
+      "label": "Core Plugin Hooks",
+      "file_type": "code",
+      "source_file": "src/hooks.ts",
+      "id": "plugin_hooks",
+      "community": 1,
+      "norm_label": "core plugin hooks"
+    },
+    {
+      "label": "Plugin Entry Point",
+      "file_type": "code",
+      "source_file": "src/index.ts",
+      "id": "plugin_main",
+      "community": 4,
+      "norm_label": "plugin entry point"
+    },
+    {
+      "label": "Root Page Resolver",
+      "file_type": "code",
+      "source_file": "src/resolveRootPageType.ts",
+      "id": "resolve_root",
+      "community": 1,
+      "norm_label": "root page resolver"
+    },
+    {
+      "label": "Page Types Health Widget",
+      "file_type": "code",
+      "source_file": "src/admin/widgets/PageTypesHealth.tsx",
+      "id": "health_widget",
+      "community": 1,
+      "norm_label": "page types health widget"
+    },
+    {
+      "label": "Page Type Custom Field",
+      "file_type": "code",
+      "source_file": "src/components/PageTypeField.tsx",
+      "id": "page_type_field",
+      "community": 1,
+      "norm_label": "page type custom field"
+    },
+    {
+      "label": "Slug Description Component",
+      "file_type": "code",
+      "source_file": "src/components/SlugDescription.tsx",
+      "id": "slug_description",
+      "community": 1,
+      "norm_label": "slug description component"
+    },
+    {
+      "label": "Client Side Exports",
+      "file_type": "code",
+      "source_file": "src/exports/client.ts",
+      "id": "client_exports",
+      "community": 4,
+      "norm_label": "client side exports"
+    },
+    {
+      "label": "Server Side Exports",
+      "file_type": "code",
+      "source_file": "src/exports/rsc.ts",
+      "id": "rsc_exports",
+      "community": 4,
+      "norm_label": "server side exports"
+    },
+    {
+      "label": "Hooks Unit Tests",
+      "file_type": "code",
+      "source_file": "src/__tests__/hooks.test.ts",
+      "id": "hooks_tests",
+      "community": 1,
+      "norm_label": "hooks unit tests"
+    },
+    {
+      "label": "Resolver Unit Tests",
+      "file_type": "code",
+      "source_file": "src/__tests__/resolveRootPageType.test.ts",
+      "id": "resolve_root_tests",
+      "community": 1,
+      "norm_label": "resolver unit tests"
+    },
+    {
+      "label": "Project README",
+      "file_type": "document",
+      "source_file": "README.md",
+      "id": "readme",
+      "community": 4,
+      "norm_label": "project readme"
+    },
+    {
+      "label": "Architecture Guide",
+      "file_type": "document",
+      "source_file": "HOW-IT-WORKS.md",
+      "id": "how_it_works",
+      "community": 1,
+      "norm_label": "architecture guide"
+    },
+    {
+      "label": "Phase 1: Core Logic Docs",
+      "file_type": "document",
+      "source_file": "dev-docs/Phase1_CoreLogic.md",
+      "id": "phase1_docs",
+      "community": 1,
+      "norm_label": "phase 1: core logic docs"
+    },
+    {
+      "label": "Phase 3: Blocks System Docs",
+      "file_type": "document",
+      "source_file": "dev-docs/Phase3_BlocksSystem.md",
+      "id": "phase3_docs",
+      "community": 18,
+      "norm_label": "phase 3: blocks system docs"
+    }
+  ],
+  "links": [
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "eslint_config_js",
+      "_tgt": "eslint_config",
+      "source": "eslint_config_js",
+      "target": "eslint_config",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "dev_int_spec_ts",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_int_spec_ts",
+      "target": "dev_payload_config_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\int.spec.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_src": "dev_int_spec_ts",
+      "_tgt": "src_endpoints_customendpointhandler_ts",
+      "source": "dev_int_spec_ts",
+      "target": "src_endpoints_customendpointhandler_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_src": "dev_app_payload_layout_tsx",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_payload_config_ts",
+      "target": "dev_app_payload_layout_tsx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_segments_not_found_tsx",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_payload_config_ts",
+      "target": "dev_app_payload_admin_segments_not_found_tsx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_segments_page_tsx",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_payload_config_ts",
+      "target": "dev_app_payload_admin_segments_page_tsx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\graphql\\route.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "dev_app_payload_api_graphql_route_ts",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_payload_config_ts",
+      "target": "dev_app_payload_api_graphql_route_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\graphql-playground\\route.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "dev_app_payload_api_graphql_playground_route_ts",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_payload_config_ts",
+      "target": "dev_app_payload_api_graphql_playground_route_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\api\\[...slug]\\route.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "dev_app_payload_api_slug_route_ts",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_payload_config_ts",
+      "target": "dev_app_payload_api_slug_route_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_src": "dev_app_my_route_route_ts",
+      "_tgt": "dev_payload_config_ts",
+      "source": "dev_payload_config_ts",
+      "target": "dev_app_my_route_route_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\seed.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_src": "dev_seed_ts",
+      "_tgt": "dev_seed_seed",
+      "source": "dev_seed_ts",
+      "target": "dev_seed_seed",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\layout.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_src": "dev_app_payload_layout_tsx",
+      "_tgt": "payload_layout_layout",
+      "source": "dev_app_payload_layout_tsx",
+      "target": "payload_layout_layout",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_importmap_js",
+      "_tgt": "src_exports_client_ts",
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "src_exports_client_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\importMap.js",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_importmap_js",
+      "_tgt": "src_exports_rsc_ts",
+      "source": "dev_app_payload_admin_importmap_js",
+      "target": "src_exports_rsc_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_segments_not_found_tsx",
+      "_tgt": "segments_not_found_generatemetadata",
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "segments_not_found_generatemetadata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\not-found.tsx",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_segments_not_found_tsx",
+      "_tgt": "segments_not_found_notfound",
+      "source": "dev_app_payload_admin_segments_not_found_tsx",
+      "target": "segments_not_found_notfound",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_segments_page_tsx",
+      "_tgt": "segments_page_generatemetadata",
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "segments_page_generatemetadata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\(payload)\\admin\\[[...segments]]\\page.tsx",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_src": "dev_app_payload_admin_segments_page_tsx",
+      "_tgt": "segments_page_page",
+      "source": "dev_app_payload_admin_segments_page_tsx",
+      "target": "segments_page_page",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\app\\my-route\\route.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "dev_app_my_route_route_ts",
+      "_tgt": "my_route_route_get",
+      "source": "dev_app_my_route_route_ts",
+      "target": "my_route_route_get",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_src": "dev_helpers_testemailadapter_ts",
+      "_tgt": "helpers_testemailadapter_testemailadapter",
+      "source": "dev_helpers_testemailadapter_ts",
+      "target": "helpers_testemailadapter_testemailadapter",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev\\helpers\\testEmailAdapter.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_src": "dev_helpers_testemailadapter_ts",
+      "_tgt": "helpers_testemailadapter_getstringifiedtoaddress",
+      "source": "dev_helpers_testemailadapter_ts",
+      "target": "helpers_testemailadapter_getstringifiedtoaddress",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_src": "src_enhancecollection_ts",
+      "_tgt": "src_enhancecollection_enhancecollection",
+      "source": "src_enhancecollection_ts",
+      "target": "src_enhancecollection_enhancecollection",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L143",
+      "weight": 1.0,
+      "_src": "src_enhancecollection_enhancecollection",
+      "_tgt": "src_hooks_createbeforevalidatehook",
+      "source": "src_enhancecollection_enhancecollection",
+      "target": "src_hooks_createbeforevalidatehook"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\enhanceCollection.ts",
+      "source_location": "L144",
+      "weight": 1.0,
+      "_src": "src_enhancecollection_enhancecollection",
+      "_tgt": "src_hooks_createbeforedeletehook",
+      "source": "src_enhancecollection_enhancecollection",
+      "target": "src_hooks_createbeforedeletehook"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_src": "src_hooks_ts",
+      "_tgt": "src_hooks_createbeforevalidatehook",
+      "source": "src_hooks_ts",
+      "target": "src_hooks_createbeforevalidatehook",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\hooks.ts",
+      "source_location": "L151",
+      "weight": 1.0,
+      "_src": "src_hooks_ts",
+      "_tgt": "src_hooks_createbeforedeletehook",
+      "source": "src_hooks_ts",
+      "target": "src_hooks_createbeforedeletehook",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\hooks.test.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_src": "src_tests_hooks_test_ts",
+      "_tgt": "src_hooks_ts",
+      "source": "src_hooks_ts",
+      "target": "src_tests_hooks_test_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_src": "src_index_ts",
+      "_tgt": "src_index_extractblockrestrictions",
+      "source": "src_index_ts",
+      "target": "src_index_extractblockrestrictions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_src": "src_index_ts",
+      "_tgt": "src_index_pagetypesplugin",
+      "source": "src_index_ts",
+      "target": "src_index_pagetypesplugin",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\index.ts",
+      "source_location": "L108",
+      "weight": 1.0,
+      "_src": "src_index_ts",
+      "_tgt": "src_index_validatepluginconfig",
+      "source": "src_index_ts",
+      "target": "src_index_validatepluginconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\resolveRootPageType.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_src": "src_resolverootpagetype_ts",
+      "_tgt": "src_resolverootpagetype_resolverootpagetype",
+      "source": "src_resolverootpagetype_ts",
+      "target": "src_resolverootpagetype_resolverootpagetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\resolveRootPageType.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "src_tests_resolverootpagetype_test_ts",
+      "_tgt": "src_resolverootpagetype_ts",
+      "source": "src_resolverootpagetype_ts",
+      "target": "src_tests_resolverootpagetype_test_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\__tests__\\hooks.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "src_tests_hooks_test_ts",
+      "_tgt": "src_types_ts",
+      "source": "src_types_ts",
+      "target": "src_tests_hooks_test_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\PageTypesHealth.tsx",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_src": "src_admin_widgets_pagetypeshealth_tsx",
+      "_tgt": "widgets_pagetypeshealth_pagetypeshealthwidget",
+      "source": "src_admin_widgets_pagetypeshealth_tsx",
+      "target": "widgets_pagetypeshealth_pagetypeshealthwidget",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\admin\\widgets\\QuickCreateButton.tsx",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_src": "src_admin_widgets_quickcreatebutton_tsx",
+      "_tgt": "widgets_quickcreatebutton_quickcreatebutton",
+      "source": "src_admin_widgets_quickcreatebutton_tsx",
+      "target": "widgets_quickcreatebutton_quickcreatebutton",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardClient.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_src": "src_components_beforedashboardclient_tsx",
+      "_tgt": "components_beforedashboardclient_beforedashboardclient",
+      "source": "src_components_beforedashboardclient_tsx",
+      "target": "components_beforedashboardclient_beforedashboardclient",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\BeforeDashboardServer.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_src": "src_components_beforedashboardserver_tsx",
+      "_tgt": "components_beforedashboardserver_beforedashboardserver",
+      "source": "src_components_beforedashboardserver_tsx",
+      "target": "components_beforedashboardserver_beforedashboardserver",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\PageTypeField.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_src": "src_components_pagetypefield_tsx",
+      "_tgt": "components_pagetypefield_fetchdata",
+      "source": "src_components_pagetypefield_tsx",
+      "target": "components_pagetypefield_fetchdata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\endpoints\\customEndpointHandler.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "src_endpoints_customendpointhandler_ts",
+      "_tgt": "endpoints_customendpointhandler_customendpointhandler",
+      "source": "src_endpoints_customendpointhandler_ts",
+      "target": "endpoints_customendpointhandler_customendpointhandler",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "e2e_tests",
+      "_tgt": "playwright_config",
+      "source": "playwright_config",
+      "target": "e2e_tests"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "int_tests",
+      "_tgt": "vitest_config",
+      "source": "vitest_config",
+      "target": "int_tests"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "_src": "next_config",
+      "_tgt": "payload_config",
+      "source": "next_config",
+      "target": "payload_config"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "payload_config",
+      "_tgt": "payload_types",
+      "source": "payload_types",
+      "target": "payload_config"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "seed_script",
+      "_tgt": "payload_config",
+      "source": "payload_config",
+      "target": "seed_script"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "admin_layout",
+      "_tgt": "payload_config",
+      "source": "payload_config",
+      "target": "admin_layout"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "admin_page",
+      "_tgt": "payload_config",
+      "source": "payload_config",
+      "target": "admin_page"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "graphql_route",
+      "_tgt": "payload_config",
+      "source": "payload_config",
+      "target": "graphql_route"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "rest_api_route",
+      "_tgt": "payload_config",
+      "source": "payload_config",
+      "target": "rest_api_route"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "phase3_docs",
+      "_tgt": "service_block",
+      "source": "service_block",
+      "target": "phase3_docs"
+    },
+    {
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "_src": "pages_collection",
+      "_tgt": "plugin_main",
+      "source": "pages_collection",
+      "target": "plugin_main"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "plugin_main",
+      "_tgt": "enhance_collection",
+      "source": "enhance_collection",
+      "target": "plugin_main"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "enhance_collection",
+      "_tgt": "plugin_hooks",
+      "source": "enhance_collection",
+      "target": "plugin_hooks"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "plugin_hooks",
+      "_tgt": "resolve_root",
+      "source": "plugin_hooks",
+      "target": "resolve_root"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "_src": "page_type_field",
+      "_tgt": "plugin_hooks",
+      "source": "plugin_hooks",
+      "target": "page_type_field"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "hooks_tests",
+      "_tgt": "plugin_hooks",
+      "source": "plugin_hooks",
+      "target": "hooks_tests"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "_src": "slug_description",
+      "_tgt": "plugin_hooks",
+      "source": "plugin_hooks",
+      "target": "slug_description"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "client_exports",
+      "_tgt": "plugin_main",
+      "source": "plugin_main",
+      "target": "client_exports"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "rsc_exports",
+      "_tgt": "plugin_main",
+      "source": "plugin_main",
+      "target": "rsc_exports"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "readme",
+      "_tgt": "plugin_main",
+      "source": "plugin_main",
+      "target": "readme"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "health_widget",
+      "_tgt": "resolve_root",
+      "source": "resolve_root",
+      "target": "health_widget"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "resolve_root_tests",
+      "_tgt": "resolve_root",
+      "source": "resolve_root",
+      "target": "resolve_root_tests"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "how_it_works",
+      "_tgt": "resolve_root",
+      "source": "resolve_root",
+      "target": "how_it_works"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "_src": "phase1_docs",
+      "_tgt": "resolve_root",
+      "source": "resolve_root",
+      "target": "phase1_docs"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "dev_environment",
+      "label": "Development Environment Stack",
+      "nodes": [
+        "payload_config",
+        "next_config",
+        "seed_script",
+        "admin_layout"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9
+    },
+    {
+      "id": "core_logic",
+      "label": "Core Plugin Architecture",
+      "nodes": [
+        "plugin_main",
+        "enhance_collection",
+        "plugin_hooks",
+        "resolve_root"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "id": "documentation",
+      "label": "Project Documentation",
+      "nodes": [
+        "readme",
+        "how_it_works",
+        "phase1_docs",
+        "phase3_docs"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    }
+  ]
+}

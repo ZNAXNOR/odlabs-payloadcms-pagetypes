@@ -1,0 +1,125 @@
+{
+  "nodes": [
+    {
+      "id": "dev_blocks_globalblock_config_ts",
+      "label": "Global Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/GlobalBlock/config.ts"
+    },
+    {
+      "id": "dev_blocks_legalblock_config_ts",
+      "label": "Legal Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/LegalBlock/config.ts"
+    },
+    {
+      "id": "dev_blocks_serviceblock_config_ts",
+      "label": "Service Block Config",
+      "file_type": "code",
+      "source_file": "dev/blocks/ServiceBlock/config.ts"
+    },
+    {
+      "id": "dev_collections_pages_ts",
+      "label": "Pages Collection",
+      "file_type": "code",
+      "source_file": "dev/collections/Pages.ts"
+    },
+    {
+      "id": "src_enhancecollection_ts",
+      "label": "Collection Enhancer",
+      "file_type": "code",
+      "source_file": "src/enhanceCollection.ts"
+    },
+    {
+      "id": "src_hooks_ts",
+      "label": "Core Plugin Hooks",
+      "file_type": "code",
+      "source_file": "src/hooks.ts"
+    },
+    {
+      "id": "src_index_ts",
+      "label": "Plugin Entry Point",
+      "file_type": "code",
+      "source_file": "src/index.ts"
+    },
+    {
+      "id": "src_resolverootpagetype_ts",
+      "label": "Root Page Resolver",
+      "file_type": "code",
+      "source_file": "src/resolveRootPageType.ts"
+    },
+    {
+      "id": "src_admin_widgets_pagetypeshealth_tsx",
+      "label": "Page Types Health Widget",
+      "file_type": "code",
+      "source_file": "src/admin/widgets/PageTypesHealth.tsx"
+    },
+    {
+      "id": "src_components_pagetypefield_tsx",
+      "label": "Page Type Custom Field",
+      "file_type": "code",
+      "source_file": "src/components/PageTypeField.tsx"
+    }
+  ],
+  "edges": [
+    {
+      "source": "src_index_ts",
+      "target": "src_enhancecollection_ts",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_enhancecollection_ts",
+      "target": "src_hooks_ts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_hooks_ts",
+      "target": "src_resolverootpagetype_ts",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "src_admin_widgets_pagetypeshealth_tsx",
+      "target": "src_resolverootpagetype_ts",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "dev_collections_pages_ts",
+      "target": "src_index_ts",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9
+    },
+    {
+      "source": "src_components_pagetypefield_tsx",
+      "target": "src_hooks_ts",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "core_logic",
+      "label": "Core Plugin Architecture",
+      "nodes": [
+        "src_index_ts",
+        "src_enhancecollection_ts",
+        "src_hooks_ts",
+        "src_resolverootpagetype_ts"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    }
+  ],
+  "input_tokens": 6000,
+  "output_tokens": 1500
+}

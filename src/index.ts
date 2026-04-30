@@ -41,6 +41,16 @@ export const pageTypesPlugin =
     // Enhance target collection
     const enhancedCollections = (config.collections || []).map((collection) => {
       if (collection.slug === pluginConfig.collectionSlug) {
+        // Check for parent field (provided by nestedDocsPlugin)
+        const hasParent = collection.fields?.some((f) => 'name' in f && f.name === 'parent')
+        if (!hasParent) {
+          throw new Error(
+            `pageTypesPlugin: The collection "${collection.slug}" is missing a "parent" field. ` +
+              `This plugin requires @payloadcms/plugin-nested-docs to be configured for this collection. ` +
+              `Ensure nestedDocsPlugin is applied BEFORE pageTypesPlugin in your payload.config.ts.`,
+          )
+        }
+
         // Auto-extract restrictions from blocks
         const blockRestrictions = extractBlockRestrictions(collection)
 

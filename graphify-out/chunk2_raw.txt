@@ -1,0 +1,1359 @@
+--- FILE: dev/blocks/GlobalBlock/config.ts ---
+import type { Block } from 'payload'
+
+export const GlobalBlock: Block = {
+  slug: 'globalBlock',
+  fields: [
+    {
+      name: 'text',
+      type: 'text',
+    },
+  ],
+}
+
+
+--- FILE: dev/blocks/LegalBlock/config.ts ---
+import type { Block } from 'payload'
+
+export const LegalBlock: Block = {
+  slug: 'legalBlock',
+  custom: {
+    allowedPageTypes: ['legal'],
+  },
+  fields: [
+    {
+      name: 'text',
+      type: 'text',
+    },
+  ],
+}
+
+
+--- FILE: dev/blocks/ServiceBlock/config.ts ---
+import type { Block } from 'payload'
+
+export const ServiceBlock: Block = {
+  slug: 'serviceBlock',
+  custom: {
+    allowedPageTypes: ['services'],
+  },
+  fields: [
+    {
+      name: 'text',
+      type: 'text',
+    },
+  ],
+}
+
+
+--- FILE: dev/collections/Pages.ts ---
+import type { CollectionConfig } from 'payload'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  access: {
+    create: () => true,
+    delete: () => true,
+    read: () => true,
+    update: () => true,
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true
+    },
+    {
+      name: 'layout',
+      type: 'blocks',
+      blocks: [
+        {
+          slug: 'hero',
+          fields: [{ name: 'title', type: 'text', required: true }],
+          labels: {
+            plural: 'Heroes',
+            singular: 'Hero',
+          },
+        },
+        {
+          slug: 'testimonials',
+          fields: [
+            {
+              name: 'items',
+              type: 'array',
+              fields: [{ name: 'text', type: 'text' }],
+            },
+          ],
+          labels: {
+            plural: 'Testimonials',
+            singular: 'Testimonial',
+          },
+        },
+      ],
+    },
+    {
+      name: 'pageType',
+      type: 'select',
+      options: [
+        { label: 'Services', value: 'services' },
+        { label: 'Legal', value: 'legal' },
+      ],
+    },
+  ]
+}
+
+
+--- FILE: dev/helpers/testEmailAdapter.ts ---
+import type { EmailAdapter, SendEmailOptions } from 'payload'
+
+/**
+ * Logs all emails to stdout
+ */
+export const testEmailAdapter: EmailAdapter<void> = ({ payload }) => ({
+  name: 'test-email-adapter',
+  defaultFromAddress: 'dev@payloadcms.com',
+  defaultFromName: 'Payload Test',
+  sendEmail: async (message) => {
+    const stringifiedTo = getStringifiedToAddress(message)
+    const res = `Test email to: '${stringifiedTo}', Subject: '${message.subject}'`
+    payload.logger.info({ content: message, msg: res })
+    return Promise.resolve()
+  },
+})
+
+function getStringifiedToAddress(message: SendEmailOptions): string | undefined {
+  let stringifiedTo: string | undefined
+
+  if (typeof message.to === 'string') {
+    stringifiedTo = message.to
+  } else if (Array.isArray(message.to)) {
+    stringifiedTo = message.to
+      .map((to: { address: string } | string) => {
+        if (typeof to === 'string') {
+          return to
+        } else if (to.address) {
+          return to.address
+        }
+        return ''
+      })
+      .join(', ')
+  } else if (message.to?.address) {
+    stringifiedTo = message.to.address
+  }
+  return stringifiedTo
+}
+
+
+--- FILE: src/enhanceCollection.ts ---
+import { type CollectionConfig, type Field, slugField } from 'payload'
+
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+import type { PluginConfig } from './types'
+
+import { createBeforeDeleteHook, createBeforeValidateHook } from './hooks'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+export function enhanceCollection(collection: CollectionConfig, config: PluginConfig): CollectionConfig {
+  const { pageTypes } = config
+
+  const existingFields = collection.fields || []
+  const newFields = [...existingFields]
+
+  // ─────────────────────────────────────────────────────────────
+  // 1. MANAGE slug FIELD (Custom component & soft validation)
+  // ─────────────────────────────────────────────────────────────
+  let foundSlug = false
+
+  const enhanceSlugField = (f: any) => {
+    foundSlug = true
+    f.admin = {
+      ...f.admin,
+      position: 'sidebar',
+    }
+  }
+
+  const walkFields = (fields: Field[]) => {
+    for (let i = 0; i < fields.length; i++) {
+      const f = fields[i] as any
+      if (f.name === 'slug') {
+        enhanceSlugField(f)
+      } else if (f.fields) {
+        walkFields(f.fields)
+      }
+    }
+  }
+
+  walkFields(newFields)
+
+  if (!foundSlug) {
+    newFields.push(
+      slugField({
+        useAsSlug: 'title',
+        overrides: (field: any) => {
+          const slugF = field.fields.find((f: any) => f.name === 'slug') as any
+          if (slugF) {
+            enhanceSlugField(slugF)
+          }
+          field.admin = { ...field.admin, position: 'sidebar' }
+          return field
+        },
+      })
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 2. MANAGE parent FIELD (Nested Docs aware)
+  // ─────────────────────────────────────────────────────────────
+  const parentIdx = newFields.findIndex((f) => 'name' in f && f.name === 'parent')
+  if (parentIdx !== -1) {
+    const existing = newFields[parentIdx] as any
+    newFields[parentIdx] = {
+      ...existing,
+      admin: {
+        ...existing.admin,
+        condition: (data: any) => !data?.pageType || !!data?.parent,
+        position: 'sidebar',
+      },
+    }
+  }
+
+
+  // ─────────────────────────────────────────────────────────────
+  // 3. MANAGE pageType FIELD
+  // ─────────────────────────────────────────────────────────────
+  const pageTypeField: Field = {
+    name: 'pageType',
+    type: 'select',
+    admin: {
+      components: {
+        // Use the Client Component for reactive behavior
+        Field: '@od-labs/payload-pagetypes/client#PageTypeField',
+      },
+      condition: (_, siblingData) => !siblingData?.parent,
+      description: 'Choose the page type. Child pages inherit from their root.',
+      position: 'sidebar',
+    },
+    label: 'Page Type',
+    options: pageTypes.map((pt) => ({
+      label: pt.label,
+      value: pt.slug,
+    })),
+    required: false,
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 5. ENFORCE SIDEBAR HIERARCHY (Slug -> Parent -> PageType)
+  // ─────────────────────────────────────────────────────────────
+  
+  // 1. Extract and remove these fields to re-insert in order
+  const extractField = (name: string) => {
+    const idx = newFields.findIndex(f => 'name' in f && f.name === name)
+    if (idx !== -1) {
+      return newFields.splice(idx, 1)[0]
+    }
+    // Also check for slugField (Row field)
+    const rowIdx = newFields.findIndex(f => f.type === 'row' && f.fields?.some((sub: any) => sub.name === name))
+    if (rowIdx !== -1) {
+      return newFields.splice(rowIdx, 1)[0]
+    }
+    return null
+  }
+
+  const slugWarningField: Field = {
+    name: 'slugWarning',
+    type: 'ui',
+    admin: {
+      components: {
+        Field: '@od-labs/payload-pagetypes/client#SlugDescription',
+      },
+      position: 'sidebar',
+    },
+  }
+
+  const slugF = extractField('slug')
+  const parentF = extractField('parent')
+  const pageTypeF = extractField('pageType') || pageTypeField
+
+  // 2. Push in desired order to the end
+  if (slugF) newFields.push(slugF)
+  newFields.push(slugWarningField) // Inject warning as a separate UI field
+  if (parentF) newFields.push(parentF)
+  if (pageTypeF) newFields.push(pageTypeF)
+
+  // ─────────────────────────────────────────────────────────────
+  // 4. INJECT HOOKS
+  // ─────────────────────────────────────────────────────────────
+  const beforeValidateHook = createBeforeValidateHook(config)
+  const beforeDeleteHook = createBeforeDeleteHook(config)
+
+  const existingBeforeValidate = collection.hooks?.beforeValidate || []
+  const existingBeforeDelete = collection.hooks?.beforeDelete || []
+
+  const beforeValidateArray = Array.isArray(existingBeforeValidate)
+    ? existingBeforeValidate
+    : [existingBeforeValidate]
+
+  const beforeDeleteArray = Array.isArray(existingBeforeDelete)
+    ? existingBeforeDelete
+    : [existingBeforeDelete]
+
+  // ─────────────────────────────────────────────────────────────
+  // 5. ENHANCE LAYOUT FIELD (Native filterOptions)
+  // ─────────────────────────────────────────────────────────────
+  const layoutFieldIdx = newFields.findIndex((f) => 'name' in f && f.name === 'layout' && f.type === 'blocks')
+  
+  if (layoutFieldIdx !== -1) {
+    const layoutField = newFields[layoutFieldIdx] as any
+
+    // Extract allowed blocks from their config
+    const blockRestrictionsMap = new Map<string, string[]>()
+
+    layoutField.blocks?.forEach((block: any) => {
+      // In Phase 2 we changed this to block.custom?.allowedPageTypes
+      const allowedPageTypes = block.custom?.allowedPageTypes || block.allowedPageTypes
+      if (allowedPageTypes) {
+        blockRestrictionsMap.set(block.slug, allowedPageTypes)
+      }
+    })
+
+    // Set filterOptions on the blocks field
+    newFields[layoutFieldIdx] = {
+      ...layoutField,
+      filterOptions: ({ siblingData }: any) => {
+        const pageType = siblingData?.pageType
+
+        // If no pageType selected (root without type), show all blocks
+        if (!pageType) {
+          return true
+        }
+
+        // Filter blocks: return only slugs allowed for this pageType
+        const allowedBlockSlugs: string[] = []
+
+        layoutField.blocks?.forEach((block: any) => {
+          const allowedTypes = blockRestrictionsMap.get(block.slug)
+
+          // No restriction = allowed everywhere
+          if (!allowedTypes) {
+            allowedBlockSlugs.push(block.slug)
+          }
+          // Has restriction: check if current pageType is in allowed list
+          else if (allowedTypes.includes(pageType)) {
+            allowedBlockSlugs.push(block.slug)
+          }
+        })
+
+        return allowedBlockSlugs
+      }
+    }
+  }
+  return {
+    ...collection,
+    custom: {
+      ...collection.custom,
+      pageTypesPlugin: {
+        pageTypes: config.pageTypes,
+        collectionSlug: config.collectionSlug,
+      },
+    },
+    fields: newFields,
+    hooks: {
+      ...collection.hooks,
+      beforeDelete: [...beforeDeleteArray, beforeDeleteHook],
+      beforeValidate: [...beforeValidateArray, beforeValidateHook],
+    },
+  }
+}
+
+
+--- FILE: src/hooks.ts ---
+import type { CollectionBeforeDeleteHook, CollectionBeforeValidateHook } from 'payload'
+
+import type { PluginConfig } from './types'
+
+import { resolveRootPageType } from './resolveRootPageType'
+
+export const createBeforeValidateHook = (config: PluginConfig): CollectionBeforeValidateHook => {
+  return async ({ data, originalDoc, req }) => {
+    if (!data) {
+      return data
+    }
+    const { collectionSlug, pageTypes, restrictions } = config
+
+    // Determine parent (null means root, someId means child, undefined means use originalDoc)
+    const effectiveParent = data.parent !== undefined ? data.parent : originalDoc?.parent
+    const isRoot = !effectiveParent
+
+    // Determine current pageType
+    const effectivePageType = (data.pageType !== undefined ? data.pageType : originalDoc?.pageType) as
+      | null
+      | string
+      | undefined
+
+    // ─────────────────────────────────────────────────────────────
+    // ROOT PAGE VALIDATION
+    // ─────────────────────────────────────────────────────────────
+
+    if (isRoot) {
+      // NOTE: Root pageType is now OPTIONAL (Simple Pages)
+      if (effectivePageType) {
+        const trimmedType = effectivePageType.trim()
+
+        // Update data if it's being set or if it's a new doc
+        if (data.pageType !== undefined) {
+          data.pageType = trimmedType
+        }
+
+        // Rule 1: Validate pageType is in config
+        const validType = pageTypes.find((t) => t.slug === trimmedType)
+        if (!validType) {
+          throw new Error(
+            `Invalid pageType "${trimmedType}". Valid types: ${pageTypes.map((t) => t.slug).join(', ')}`,
+          )
+        }
+
+        // Rule 2: Prevent duplicate roots (only on create or on type/parent change)
+        const isTypeChanged = data.pageType !== undefined && originalDoc?.pageType !== trimmedType
+        const isParentChanged = data.parent !== undefined && originalDoc?.parent !== data.parent
+
+        if (!originalDoc || isTypeChanged || isParentChanged) {
+          const where: any = {
+            and: [
+              { parent: { equals: null } },
+              { pageType: { equals: trimmedType } },
+            ],
+          }
+
+          if (originalDoc?.id) {
+            where.and.push({ id: { not_equals: originalDoc.id } })
+          }
+
+          const existing = await req.payload.find({
+            collection: collectionSlug,
+            limit: 1,
+            overrideAccess: false,
+            req,
+            user: req.user,
+            where,
+          })
+
+          if (existing.totalDocs > 0) {
+            throw new Error(
+              `A root page already exists for page type "${validType.label}". ` +
+                `Only one root per type is allowed.`,
+            )
+          }
+        }
+
+        // Rule 3: Slug Validation (Soft mode)
+        const currentSlug = data.slug !== undefined ? data.slug : originalDoc?.slug
+        if (config.enforceRootSlug && currentSlug && currentSlug !== trimmedType) {
+          // Soft validation: we let it save. The UI/Description will show the warning.
+          // Note: If the user explicitly wants blocking strict mode, we'd add another flag.
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CHILD PAGE VALIDATION
+    // ─────────────────────────────────────────────────────────────
+
+    if (!isRoot && effectiveParent) {
+      try {
+        // Resolve pageType from root
+        const rootPageType = await resolveRootPageType({
+          id: effectiveParent as number | string,
+          collectionSlug,
+          req,
+        })
+
+        // Always set the inherited pageType on the document during validation
+        if (rootPageType) {
+          data.pageType = rootPageType
+        }
+      } catch (err) {
+        // If resolution fails (e.g. root has no type), we allow it as a simple page child
+        console.warn(`Inheritance resolution failed for child: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // BLOCK VALIDATION (runs for root AND child)
+    // ─────────────────────────────────────────────────────────────
+
+    // Only validate if layout is being changed AND pageType is present
+    if (data.layout && Array.isArray(data.layout)) {
+      const pageTypeToValidate = data.pageType || effectivePageType
+
+      if (pageTypeToValidate) {
+        const invalidBlocks = data.layout.filter((block: Record<string, any>) => {
+          const blockType = block.blockType
+
+          // Find restriction for this block
+          const restriction = restrictions?.find((r) => r.block === blockType)
+
+          // No restriction = allowed everywhere
+          if (!restriction) {
+            return false
+          }
+
+          // Has restriction: check if current pageType is allowed
+          return !restriction.allowedPageTypes.includes(pageTypeToValidate as string)
+        })
+
+        if (invalidBlocks.length > 0) {
+          const pageTypeLabel = pageTypes.find((t) => t.slug === (pageTypeToValidate as string))?.label
+          const blockNames = invalidBlocks.map((b: Record<string, any>) => b.blockType).join(', ')
+
+          throw new Error(
+            `The following blocks are not allowed on ${pageTypeLabel} pages: ${blockNames}. ` +
+              `Please remove or replace them before saving.`,
+          )
+        }
+      }
+    }
+
+    return data
+  }
+}
+
+export const createBeforeDeleteHook = (config: PluginConfig): CollectionBeforeDeleteHook => {
+  return async ({ id, req }) => {
+    const { collectionSlug, pageTypes } = config
+
+    // Fetch doc to check its properties
+    const doc = (await req.payload.findByID({
+      id,
+      collection: collectionSlug,
+      depth: 0,
+      req,
+    })) as Record<string, any>
+
+    if (!doc) {
+      return
+    }
+
+    // Only check root pages
+    if (doc.parent) {
+      return
+    }
+
+    // Rule 1: Cannot delete root if it has children
+    const children = await req.payload.find({
+      collection: collectionSlug,
+      limit: 1,
+      overrideAccess: false,
+      req,
+      user: req.user,
+      where: {
+        parent: { equals: id },
+      },
+    })
+
+    if (children.totalDocs > 0) {
+      throw new Error(
+        `Cannot delete this page because it has ${children.totalDocs} child page(s). ` +
+          `Move or delete child pages first.`,
+      )
+    }
+
+    // Rule 2: Cannot delete required roots (if it has a type)
+    if (doc.pageType) {
+      const pageTypeCfg = pageTypes.find((t) => t.slug === (doc.pageType as string))
+
+      if (pageTypeCfg?.required) {
+        throw new Error(
+          `Cannot delete the "${pageTypeCfg.label}" root page. ` +
+            `This page type is required by your site structure.`,
+        )
+      }
+    }
+  }
+}
+
+
+--- FILE: src/index.ts ---
+import type { Config, CollectionConfig } from 'payload'
+
+import type { PluginConfig, BlockRestriction } from './types'
+
+import { enhanceCollection } from './enhanceCollection'
+
+/**
+ * Automatically extract restrictions from block configs
+ */
+function extractBlockRestrictions(collection: CollectionConfig): BlockRestriction[] {
+  const layoutField = collection.fields?.find(
+    (f) => typeof f === 'object' && 'name' in f && f.name === 'layout',
+  ) as any
+
+  if (!layoutField?.blocks) return []
+
+  const extracted = layoutField.blocks
+    .filter((block: any) => block.custom?.allowedPageTypes)
+    .map((block: any) => ({
+      block: block.slug,
+      allowedPageTypes: block.custom.allowedPageTypes,
+    }))
+
+  console.log('--- PAGE TYPES PLUGIN: Extracted Restrictions ---', extracted)
+  
+  return extracted
+}
+
+/**
+ * Payload Page Types Plugin
+ *
+ * Enforces structured page types with hierarchical consistency
+ * and block-level restrictions.
+ */
+export const pageTypesPlugin =
+  (pluginConfig: PluginConfig) =>
+  (config: Config): Config => {
+    // Validate config before processing
+    validatePluginConfig(pluginConfig)
+
+    // Enhance target collection
+    const enhancedCollections = (config.collections || []).map((collection) => {
+      if (collection.slug === pluginConfig.collectionSlug) {
+        // Auto-extract restrictions from blocks
+        const blockRestrictions = extractBlockRestrictions(collection)
+
+        // Merge with any manually defined restrictions (manual takes precedence)
+        const mergedConfig = {
+          ...pluginConfig,
+          restrictions: [...blockRestrictions, ...(pluginConfig.restrictions || [])],
+        }
+
+        return enhanceCollection(collection, mergedConfig)
+      }
+      return collection
+    })
+
+    // Skip widget if explicitly disabled
+    if (pluginConfig.enableDashboardWidget === false) {
+      return { ...config, collections: enhancedCollections }
+    }
+
+    // Register widget in modular dashboard
+    return {
+      ...config,
+      collections: enhancedCollections,
+      admin: {
+        ...config.admin,
+        dashboard: {
+          ...config.admin?.dashboard,
+          widgets: [
+            ...(config.admin?.dashboard?.widgets || []),
+            {
+              slug: 'page-types-health',
+              label: 'Page Types Health',
+              Component: {
+                path: '@od-labs/payload-pagetypes/rsc',
+                exportName: 'PageTypesHealthWidget',
+                serverProps: {
+                  pageTypes: pluginConfig.pageTypes,
+                  collectionSlug: pluginConfig.collectionSlug,
+                },
+              },
+              fields: [
+                {
+                  name: 'pageTypes',
+                  type: 'json',
+                  label: 'Page Types (auto-injected by plugin)',
+                },
+                {
+                  name: 'collectionSlug',
+                  type: 'text',
+                  label: 'Collection Slug',
+                },
+              ],
+              minWidth: 'small',
+              maxWidth: 'full',
+            },
+          ],
+        },
+      },
+    }
+  }
+
+/**
+ * Validate plugin configuration at startup
+ */
+function validatePluginConfig(config: PluginConfig): void {
+  if (!config.collectionSlug) {
+    throw new Error('pageTypesPlugin: collectionSlug is required')
+  }
+
+  if (!Array.isArray(config.pageTypes) || config.pageTypes.length === 0) {
+    throw new Error('pageTypesPlugin: pageTypes array must not be empty')
+  }
+
+  // Check for duplicate pageType slugs
+  const slugs = config.pageTypes.map((pt) => pt.slug)
+  const duplicates = slugs.filter((slug, idx) => slugs.indexOf(slug) !== idx)
+
+  if (duplicates.length > 0) {
+    throw new Error(`pageTypesPlugin: Duplicate pageType slugs found: ${duplicates.join(', ')}`)
+  }
+
+  // Check for invalid restrictions
+  const validSlugs = new Set(slugs)
+
+  if (Array.isArray(config.restrictions)) {
+    config.restrictions.forEach((restriction) => {
+      restriction.allowedPageTypes.forEach((slug) => {
+        if (!validSlugs.has(slug)) {
+          throw new Error(
+            `pageTypesPlugin: Restriction references invalid pageType "${slug}". ` +
+              `Valid types: ${Array.from(validSlugs).join(', ')}`,
+          )
+        }
+      })
+    })
+  }
+}
+
+// Re-export types for convenience
+export { resolveRootPageType } from './resolveRootPageType'
+export type { PluginConfig } from './types'
+
+
+--- FILE: src/resolveRootPageType.ts ---
+import type { CollectionSlug, PayloadRequest } from 'payload'
+
+export interface ResolveRootPageTypeArgs {
+  collectionSlug: CollectionSlug
+  id: number | string
+  req: PayloadRequest
+}
+
+export async function resolveRootPageType({
+  id,
+  collectionSlug,
+  req,
+}: ResolveRootPageTypeArgs): Promise<string> {
+  const visited = new Set<number | string>()
+  let currentId = id
+
+  // Safety: limit iterations to prevent infinite loops
+  const MAX_ITERATIONS = 100
+
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    // Cycle detection: if we've seen this ID before, there's a cycle
+    if (visited.has(currentId)) {
+      throw new Error(`Circular parent reference detected starting at ${id}. Check page hierarchy.`)
+    }
+
+    visited.add(currentId)
+
+    // Fetch the current page
+    let current: Record<string, any>
+    try {
+      current = await req.payload.findByID({
+        id: currentId,
+        collection: collectionSlug,
+        depth: 0,
+        req,
+      })
+    } catch (_ignore) {
+      throw new Error(`Parent page ${currentId} not found or deleted. Broken hierarchy at page ${id}.`)
+    }
+
+    if (!current) {
+      throw new Error(`Parent page ${currentId} returned null. Broken hierarchy at page ${id}.`)
+    }
+
+    // If no parent, we've reached the root
+    if (!current.parent) {
+      // Validate that root has pageType
+      if (!current.pageType || typeof current.pageType !== 'string' || !current.pageType.trim()) {
+        throw new Error(`Root page ${currentId} missing or empty pageType. Data corruption detected.`)
+      }
+
+      return current.pageType
+    }
+
+    // Move to parent for next iteration
+    currentId = current.parent
+  }
+
+  // Reached iteration limit
+  throw new Error(`Page hierarchy too deep (>100 levels). Check for accidental cycles or malformed data.`)
+}
+
+
+--- FILE: src/types.ts ---
+export type PageTypeConfig = {
+  label: string
+  required?: boolean
+  slug: string
+}
+
+export type BlockRestriction = {
+  allowedPageTypes: string[]
+  block: string
+}
+
+export type PluginConfig = {
+  collectionSlug: string
+  enforceRootSlug?: boolean
+  pageTypes: PageTypeConfig[]
+  restrictions?: BlockRestriction[]
+  enableDashboardWidget?: boolean
+}
+
+
+--- FILE: src/admin/widgets/PageTypesHealth.tsx ---
+import React from 'react'
+import type { WidgetServerProps } from 'payload'
+import { PageTypesHealthClient } from './PageTypesHealthClient'
+
+interface PageTypeConfig {
+  slug: string
+  label: string
+  required?: boolean
+}
+
+/**
+ * Dashboard widget for Page Types health check.
+ *
+ * Registered via `admin.dashboard.widgets` (Payload modular dashboard).
+ */
+export default async function PageTypesHealthWidget(props: WidgetServerProps) {
+  const { req, widgetData, serverProps } = props as any
+  const payload = req.payload
+
+  // ── EXTRACT CONFIG ──
+  let pageTypes: PageTypeConfig[] = (serverProps?.pageTypes as PageTypeConfig[]) || []
+  let collectionSlug = (serverProps?.collectionSlug as string) || 'pages'
+
+  if (pageTypes.length === 0 && widgetData?.pageTypes && Array.isArray(widgetData.pageTypes)) {
+    pageTypes = widgetData.pageTypes as PageTypeConfig[]
+    collectionSlug = (widgetData.collectionSlug as string) ?? collectionSlug
+  }
+
+  if (pageTypes.length === 0) {
+    const collectionWithConfig = payload.config.collections.find(
+      (c: any) => c.custom?.pageTypesPlugin,
+    )
+    if (collectionWithConfig?.custom?.pageTypesPlugin) {
+      pageTypes = collectionWithConfig.custom.pageTypesPlugin.pageTypes
+      collectionSlug = collectionWithConfig.custom.pageTypesPlugin.collectionSlug
+    } else {
+      return null
+    }
+  }
+
+  // ── FETCH ROOT PAGES ──
+  let roots: any[] = []
+  let error: string | null = null
+
+  try {
+    const result = await payload.find({
+      collection: collectionSlug,
+      where: { parent: { exists: false } },
+      limit: 100,
+      depth: 0,
+    })
+    roots = result.docs || []
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Failed to fetch page types'
+  }
+
+  // ── ANALYZE ──
+  const rootsByType = new Map<string, typeof roots>()
+  roots.forEach((root) => {
+    const type = root.pageType as string
+    if (!type) return
+    if (!rootsByType.has(type)) {
+      rootsByType.set(type, [])
+    }
+    rootsByType.get(type)!.push(root)
+  })
+
+  const missing = pageTypes.filter((pt) => !rootsByType.has(pt.slug))
+  const duplicates = Array.from(rootsByType.entries()).filter(([_, pages]) => pages.length > 1)
+
+  const isHealthy = missing.length === 0 && duplicates.length === 0
+  const healthPct =
+    pageTypes.length > 0
+      ? Math.round(((pageTypes.length - missing.length) / pageTypes.length) * 100)
+      : 100
+
+  // ── RENDER ──
+  return (
+    <PageTypesHealthClient
+      pageTypes={pageTypes}
+      collectionSlug={collectionSlug}
+      rootsByTypeSize={rootsByType.size}
+      missing={missing}
+      duplicates={duplicates}
+      isHealthy={isHealthy}
+      healthPct={healthPct}
+      error={error}
+    />
+  )
+}
+
+
+--- FILE: src/admin/widgets/PageTypesHealthClient.tsx ---
+'use client'
+
+import React, { useState } from 'react'
+import { AlertCircle, CheckCircle2, AlertTriangle, X } from 'lucide-react'
+import { QuickCreateButton } from '../../exports/client'
+import styles from './PageTypesHealth.module.css'
+
+interface PageTypeConfig {
+  slug: string
+  label: string
+  required?: boolean
+}
+
+interface PageTypesHealthClientProps {
+  pageTypes: PageTypeConfig[]
+  collectionSlug: string
+  rootsByTypeSize: number
+  missing: PageTypeConfig[]
+  duplicates: [string, any[]][]
+  isHealthy: boolean
+  healthPct: number
+  error: string | null
+}
+
+export function PageTypesHealthClient({
+  pageTypes,
+  collectionSlug,
+  rootsByTypeSize,
+  missing,
+  duplicates,
+  isHealthy,
+  healthPct,
+  error,
+}: PageTypesHealthClientProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  return (
+    <div className={styles.widget}>
+      <div className={styles.header}>
+        <h3 className={styles.title}>Page Types Health</h3>
+        <span
+          className={`${styles.badge} ${
+            isHealthy ? styles.badgeHealthy : styles.badgeError
+          }`}
+        >
+          {isHealthy ? 'Healthy' : 'Action Required'}
+        </span>
+      </div>
+
+      <div className={styles.content}>
+        {error && (
+          <div className={`${styles.alert} ${styles.alertError}`}>
+            <div className={styles.alertTitle}>
+              <AlertCircle className={styles.alertIcon} />
+              Error
+            </div>
+            <div>{error}</div>
+          </div>
+        )}
+
+        {missing.length > 0 && (
+          <div className={`${styles.alert} ${styles.alertError}`} style={{ marginBottom: '1rem' }}>
+            <div className={styles.alertTitle}>
+              <AlertCircle className={styles.alertIcon} />
+              Missing root pages
+            </div>
+            <ul className={styles.list}>
+              {missing.map((pt) => (
+                <li key={pt.slug} className={styles.listItem}>
+                  <span className={styles.label}>
+                    {pt.label}
+                    {pt.required && (
+                      <span className={styles.required}>(required)</span>
+                    )}
+                  </span>
+                  <QuickCreateButton
+                    collectionSlug={collectionSlug}
+                    label={pt.label}
+                    pageType={pt.slug}
+                    slug={pt.slug}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {duplicates.length > 0 && (
+          <div className={`${styles.alert} ${styles.alertWarning}`} style={{ marginBottom: '1rem' }}>
+            <div className={styles.alertTitle}>
+              <AlertTriangle className={styles.alertIcon} />
+              Duplicate root pages
+            </div>
+            <div className={styles.list}>
+              {duplicates.map(([type, pages]) => (
+                <div key={type}>
+                  <strong className={styles.label}>
+                    {pageTypes.find((pt) => pt.slug === type)?.label ?? type}
+                  </strong>
+                  <ul style={{ marginTop: '0.25rem', marginLeft: '1rem', listStyle: 'disc' }}>
+                    {pages.map((p: any) => (
+                      <li key={String(p.id)} style={{ fontSize: '0.875rem' }}>
+                        {String(p.title || 'Untitled')} ({String(p.slug || 'no-slug')})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isHealthy && !error && (
+          <div className={styles.success} style={{ marginBottom: '1rem' }}>
+            <CheckCircle2 className={styles.alertIcon} />
+            <p>All page types have valid root pages.</p>
+          </div>
+        )}
+
+        <div className={styles.stats} style={{ marginBottom: '1rem' }}>
+          <div>
+            <p className={styles.statLabel}>Types</p>
+            <p className={styles.statValue}>{pageTypes.length}</p>
+          </div>
+          <div>
+            <p className={styles.statLabel}>Roots Found</p>
+            <p className={styles.statValue}>{rootsByTypeSize}</p>
+          </div>
+          <div>
+            <p className={styles.statLabel}>Health</p>
+            <p className={styles.statValue}>{healthPct}%</p>
+          </div>
+        </div>
+
+        <button 
+          className={styles.viewDetails} 
+          onClick={() => setIsModalOpen(true)}
+          type="button"
+        >
+          View Details
+        </button>
+      </div>
+
+      {/* Modal */}
+      <div className={`${styles.modalOverlay} ${isModalOpen ? styles.open : ''}`}>
+        <div className={styles.modalContent}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Page Types Details</h3>
+            <button 
+              className={styles.closeButton} 
+              onClick={() => setIsModalOpen(false)}
+              type="button"
+            >
+              <X className={styles.alertIcon} />
+            </button>
+          </div>
+          <div className={styles.modalBody}>
+            {pageTypes.map(pt => {
+              const isMissing = missing.some(m => m.slug === pt.slug)
+              const isDuplicate = duplicates.some(([slug]) => slug === pt.slug)
+              
+              let statusIcon = <CheckCircle2 className={styles.alertIcon} style={{ color: 'rgb(5, 150, 105)' }} />
+              let statusText = 'Healthy'
+              
+              if (isMissing) {
+                statusIcon = <AlertCircle className={styles.alertIcon} style={{ color: 'rgb(220, 38, 38)' }} />
+                statusText = 'Missing root'
+              } else if (isDuplicate) {
+                statusIcon = <AlertTriangle className={styles.alertIcon} style={{ color: 'rgb(217, 119, 6)' }} />
+                statusText = 'Duplicate roots'
+              }
+
+              return (
+                <div key={pt.slug} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: 'var(--theme-elevation-50)', borderRadius: '0.375rem', border: '1px solid var(--theme-elevation-150)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {statusIcon}
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{pt.label}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--theme-elevation-500)' }}>/{pt.slug}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                    {statusText}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+--- FILE: src/admin/widgets/QuickCreateButton.tsx ---
+'use client'
+
+import React from 'react'
+import { useRouter } from 'next/navigation'
+import { Plus } from 'lucide-react'
+import styles from './PageTypesHealth.module.css'
+
+interface QuickCreateButtonProps {
+  collectionSlug: string
+  label: string
+  pageType: string
+  slug: string
+}
+
+export const QuickCreateButton: React.FC<QuickCreateButtonProps> = ({
+  collectionSlug,
+  label,
+  pageType,
+  slug,
+}) => {
+  const router = useRouter()
+
+  const handleClick = () => {
+    // Navigate to create page with prefilled values
+    const params = new URLSearchParams({
+      title: label,
+      slug: slug,
+      pageType: pageType,
+    })
+    router.push(`/admin/collections/${collectionSlug}/create?${params.toString()}`)
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={styles.quickCreateBtn}
+      type="button"
+    >
+      <Plus className={styles.quickCreateBtnIcon} />
+      Quick Create
+    </button>
+  )
+}
+
+
+--- FILE: src/components/BeforeDashboardClient.tsx ---
+'use client'
+import { useConfig } from '@payloadcms/ui'
+import { formatAdminURL } from 'payload/shared'
+import { useEffect, useState } from 'react'
+
+export const BeforeDashboardClient = () => {
+  const { config } = useConfig()
+
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    const fetchMessage = async () => {
+      const response = await fetch(
+        formatAdminURL({
+          apiRoute: config.routes.api,
+          path: '/my-plugin-endpoint',
+        }),
+      )
+      const result = await response.json()
+      setMessage(result.message)
+    }
+
+    void fetchMessage()
+  }, [config.serverURL, config.routes.api])
+
+  return (
+    <div>
+      <h1>Added by the plugin: Before Dashboard Client</h1>
+      <div>
+        Message from the endpoint:
+        <div>{message || 'Loading...'}</div>
+      </div>
+    </div>
+  )
+}
+
+
+--- FILE: src/components/BeforeDashboardServer.tsx ---
+import type { ServerComponentProps } from 'payload'
+
+import styles from './BeforeDashboardServer.module.css'
+
+export const BeforeDashboardServer = async (props: ServerComponentProps) => {
+  const { payload } = props
+
+  const { docs } = await payload.find({ collection: 'plugin-collection' })
+
+  return (
+    <div className={styles.wrapper}>
+      <h1>Added by the plugin: Before Dashboard Server</h1>
+      Docs from Local API:
+      {docs.map((doc) => (
+        <div key={doc.id}>{doc.id}</div>
+      ))}
+    </div>
+  )
+}
+
+
+--- FILE: src/components/PageTypeField.tsx ---
+'use client'
+
+import { FieldLabel, SelectInput, useConfig, useDocumentInfo, useField, useFormFields } from '@payloadcms/ui'
+import React, { useEffect, useState } from 'react'
+
+export const PageTypeField: React.FC<any> = (props) => {
+  const { label: labelFromProps, path, validate } = props
+  const label = labelFromProps || props.field?.label || 'Page Type'
+  
+  useEffect(() => {
+    console.log('PageTypeField props:', { label, path, value: props.value })
+  }, [label, path, props.value])
+
+  const staticOptions = props.options || props.field?.options || []
+  const { errorMessage, setValue, showError, value } = useField<string>({ path, validate })
+  const { id } = useDocumentInfo()
+  const { config } = useConfig()
+
+  // Watch the parent field
+  const parentId = useFormFields(([fields]) => fields.parent?.value) as null | number | string
+  // Track if we were previously a child to handle clearing on parent removal
+  const [wasChild, setWasChild] = useState(!!parentId)
+
+  const [usedTypes, setUsedTypes] = useState<Set<string>>(new Set())
+  const [, setIsLoading] = useState(true)
+
+  // 1. Fetch used types and handle inheritance
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const serverURL = config.serverURL || ''
+        const apiPath = config.routes.api || '/api'
+        const baseUrl = `${serverURL}${apiPath}/pages`
+
+        // Fetch used types for root pages
+        const usedTypesRes = await fetch(
+          `${baseUrl}?where[parent][equals]=null&depth=0&limit=100`,
+        )
+        const usedTypesData = await usedTypesRes.json()
+
+        if (isMounted && usedTypesData && Array.isArray(usedTypesData.docs)) {
+          const types = new Set<string>()
+          usedTypesData.docs.forEach((doc: any) => {
+            if (doc.id !== id) {
+              types.add(doc.pageType)
+            }
+          })
+          setUsedTypes(types)
+        }
+
+        // Handle inheritance if parent is selected
+        if (parentId) {
+          const parentRes = await fetch(`${baseUrl}/${parentId}?depth=0`)
+          const parentDoc = await parentRes.json()
+
+          if (isMounted && parentDoc?.pageType) {
+            setValue(parentDoc.pageType)
+            setWasChild(true)
+          }
+        } else if (wasChild) {
+          // If we transitioned from child to root, clear the inherited type
+          setValue(null as any)
+          setWasChild(false)
+        }
+      } catch (err) {
+        console.error('Failed to fetch page type data:', err)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    fetchData().catch((err) => console.error('Unhandled error in fetchData:', err))
+
+    return () => {
+      isMounted = false
+    }
+  }, [parentId, id, config, setValue, wasChild])
+
+  // 2. Filter options based on used types
+  const filteredOptions = Array.isArray(staticOptions)
+    ? staticOptions.filter((opt: any) => {
+        // Always allow the current value
+        if (opt.value === value) {
+          return true
+        }
+        // Hide if already used by another root
+        return !usedTypes.has(opt.value)
+      })
+    : []
+
+  const isReadOnly = !!parentId
+
+  return (
+    <div className="field-type select" style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '0.5rem' }}>
+        <FieldLabel
+          label={label}
+          path={path}
+          required={props.field?.required}
+        />
+      </div>
+      <div style={{ position: 'relative' }}>
+        <SelectInput
+          description={
+            isReadOnly
+              ? `Inherited from parent root.`
+              : usedTypes.size > 0
+              ? 'Some types are hidden because they are already used as root pages.'
+              : props.admin?.description
+          }
+          label={undefined}
+          name={path}
+          onChange={(val: any) => {
+            if (val) {
+              setValue(val.value || val)
+            } else {
+              setValue(null as any)
+            }
+          }}
+          options={filteredOptions}
+          path={path}
+          readOnly={isReadOnly}
+          showError={showError}
+          style={{
+            opacity: isReadOnly ? 0.6 : 1,
+            cursor: isReadOnly ? 'not-allowed' : 'auto',
+          }}
+          value={value}
+        />
+      </div>
+      {showError && errorMessage && (
+        <div style={{ color: 'var(--theme-error-500)', fontSize: '0.8rem', marginTop: '4px' }}>
+          {errorMessage}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default PageTypeField
+
+
