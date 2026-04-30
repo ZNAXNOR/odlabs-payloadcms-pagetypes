@@ -33,24 +33,24 @@
   },
   "exports": {
     ".": {
-      "import": "./src/index.js",
-      "types": "./src/index.d.ts",
-      "default": "./src/index.js"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./client": {
-      "import": "./src/exports/client.js",
-      "types": "./src/exports/client.d.ts",
-      "default": "./src/exports/client.js"
+      "import": "./dist/exports/client.js",
+      "types": "./dist/exports/client.d.ts",
+      "default": "./dist/exports/client.js"
     },
     "./rsc": {
-      "import": "./src/exports/rsc.js",
-      "types": "./src/exports/rsc.d.ts",
-      "default": "./src/exports/rsc.js"
+      "import": "./dist/exports/rsc.js",
+      "types": "./dist/exports/rsc.d.ts",
+      "default": "./dist/exports/rsc.js"
     },
-    "./styles.css": "./src/styles/globals.css"
+    "./styles.css": "./dist/styles/globals.css"
   },
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -144,5 +144,8 @@
       "unrs-resolver"
     ]
   },
-  "registry": "https://registry.npmjs.org/"
+  "registry": "https://registry.npmjs.org/",
+  "dependencies": {
+    "lucide-react": "^1.14.0"
+  }
 }

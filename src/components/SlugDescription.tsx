@@ -6,11 +6,11 @@ import { AlertCircle } from 'lucide-react'
 export const SlugDescription: React.FC<any> = (props) => {
   const { path } = props
   const fields = useFormFields(([fields]) => fields)
-  
+
   const slugValue = fields.slug?.value as string
   const pageTypeValue = fields.pageType?.value as string
   const parentValue = fields.parent?.value
-  
+
   React.useEffect(() => {
     console.log('SlugDescription trace:', { slugValue, pageTypeValue, parentValue })
   }, [slugValue, pageTypeValue, parentValue])
@@ -24,11 +24,11 @@ export const SlugDescription: React.FC<any> = (props) => {
 
   return (
     <div style={{ marginTop: '-10px', marginBottom: '10px' }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px', 
-        color: 'var(--theme-warning-500)', 
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        color: 'var(--theme-warning-500)',
         padding: '10px',
         backgroundColor: 'rgba(255, 165, 0, 0.05)',
         borderRadius: '6px',
